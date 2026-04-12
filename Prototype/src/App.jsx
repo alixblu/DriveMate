@@ -130,6 +130,33 @@ const bottomTabs = [
   { id: 'profile', label: 'Me', icon: 'profile' },
 ]
 
+const chatHistorySessions = [
+  {
+    id: 'h1',
+    title: 'Office route & toll',
+    preview: 'Best Value Route, wallet balance, coffee reminder…',
+    when: 'Today · 8:02',
+  },
+  {
+    id: 'h2',
+    title: 'Fuel & weekly cost',
+    preview: '500 VND/L change, smart route savings…',
+    when: 'Yesterday',
+  },
+  {
+    id: 'h3',
+    title: 'Rewards & trip recap',
+    preview: 'Points balance, 12 trips, time saved…',
+    when: 'Mon',
+  },
+  {
+    id: 'h4',
+    title: 'Traffic & departure',
+    preview: 'Highway congestion, leave before 8:10…',
+    when: 'Last week',
+  },
+]
+
 const initialMessages = [
   {
     role: 'assistant',
@@ -226,6 +253,11 @@ const scriptedConversation = [
   { id: 'c30', role: 'driver', content: 'Nice.' },
   { id: 'c31', role: 'assistant', content: 'Navigation is active. Have a safe trip!' },
 ]
+
+/** Assistant-summary metrics unlock after these script message indices (0-based). */
+const METRIC_DEPARTURE_AFTER_MI = 12
+const METRIC_WALLET_AFTER_MI = 18
+const METRIC_REWARDS_AFTER_MI = 21
 
 function formatCurrency(value) {
   return `${value}k`
@@ -375,6 +407,27 @@ function Icon({ name }) {
           <rect x="7" y="7" width="10" height="10" rx="1.5" fill="currentColor" stroke="none" />
         </svg>
       )
+    case 'close':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path {...commonProps} d="M18 6 6 18M6 6l12 12" />
+        </svg>
+      )
+    case 'play':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="currentColor" stroke="none" d="M9 6.5v11l9-5.5L9 6.5Z" />
+        </svg>
+      )
+    case 'send':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            {...commonProps}
+            d="m22 2-7 20-4-9-9-4 20-7Zm-11 11.2 5.6-5.6"
+          />
+        </svg>
+      )
     default:
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -447,18 +500,25 @@ function App() {
   const [walletBalance, setWalletBalance] = useState(120)
   const [rewardPoints, setRewardPoints] = useState(1250)
   const [tripCompleted, setTripCompleted] = useState(false)
-  const [messages, setMessages] = useState(initialMessages)
+  const [messages, setMessages] = useState([])
+  const [fullDemoActive, setFullDemoActive] = useState(false)
   const [draftMessage, setDraftMessage] = useState('')
   const [voiceState, setVoiceState] = useState('idle')
-  const [speakingMessageId, setSpeakingMessageId] = useState(null)
-  const [isFullConversationPlaying, setIsFullConversationPlaying] = useState(false)
   const [availableVoices, setAvailableVoices] = useState([])
   const [voiceError, setVoiceError] = useState('')
+  const [voiceChatOpen, setVoiceChatOpen] = useState(false)
+  const [streamProgress, setStreamProgress] = useState({ mi: 0, wc: 0 })
   const speechUtteranceRef = useRef(null)
   const recognitionRef = useRef(null)
   const finalTranscriptRef = useRef('')
-  const fullPlaybackSeqRef = useRef(0)
-  const fullPlaybackActiveRef = useRef(false)
+  const streamProgressRef = useRef(streamProgress)
+  const scriptTimersRef = useRef([])
+  const scriptDemoCancelledRef = useRef(false)
+
+  function clearScriptTimers() {
+    scriptTimersRef.current.forEach((id) => window.clearTimeout(id))
+    scriptTimersRef.current = []
+  }
 
   const weeklySpend = 300
   const selectedRoute = useMemo(
@@ -476,65 +536,6 @@ function App() {
   const maleVoice = useMemo(() => pickVoice(availableVoices, 'male'), [availableVoices])
   const femaleVoice = useMemo(() => pickVoice(availableVoices, 'female'), [availableVoices])
 
-  function cancelQueuedConversationPlayback() {
-    fullPlaybackSeqRef.current += 1
-    fullPlaybackActiveRef.current = false
-    setIsFullConversationPlaying(false)
-  }
-
-  function stopFullConversationPlayback() {
-    cancelQueuedConversationPlayback()
-    stopSpeechPlayback()
-  }
-
-  function playFullConversationThread() {
-    if (!hasSpeechSupport) {
-      setVoiceError('This browser does not support spoken playback.')
-      return
-    }
-
-    if (fullPlaybackActiveRef.current) {
-      stopFullConversationPlayback()
-      return
-    }
-
-    stopRecognition()
-    stopSpeechPlayback()
-    setVoiceError('')
-
-    const seq = ++fullPlaybackSeqRef.current
-    fullPlaybackActiveRef.current = true
-    setIsFullConversationPlaying(true)
-
-    function playAt(index) {
-      if (seq !== fullPlaybackSeqRef.current) {
-        return
-      }
-
-      if (index >= scriptedConversation.length) {
-        fullPlaybackActiveRef.current = false
-        setIsFullConversationPlaying(false)
-        setSpeakingMessageId(null)
-        return
-      }
-
-      const entry = scriptedConversation[index]
-      speakText(
-        entry.content,
-        entry.role === 'driver' ? 'male' : 'female',
-        () => {
-          if (seq !== fullPlaybackSeqRef.current) {
-            return
-          }
-          window.setTimeout(() => playAt(index + 1), 80)
-        },
-        { messageId: entry.id },
-      )
-    }
-
-    playAt(0)
-  }
-
   function stopSpeechPlayback() {
     if (!hasSpeechSupport) {
       return
@@ -542,7 +543,6 @@ function App() {
 
     window.speechSynthesis.cancel()
     speechUtteranceRef.current = null
-    setSpeakingMessageId(null)
   }
 
   function stopRecognition() {
@@ -551,14 +551,13 @@ function App() {
     }
   }
 
-  function speakText(text, preferredVoice, onDone, options = {}) {
+  function speakText(text, preferredVoice, onDone) {
     if (!hasSpeechSupport) {
       onDone?.()
       return
     }
 
     stopSpeechPlayback()
-    setSpeakingMessageId(options.messageId ?? null)
 
     const utterance = new window.SpeechSynthesisUtterance(text)
     const voice = preferredVoice === 'male' ? maleVoice : femaleVoice
@@ -571,16 +570,23 @@ function App() {
     utterance.rate = preferredVoice === 'male' ? 0.98 : 1
     utterance.pitch = preferredVoice === 'male' ? 0.88 : 1.14
     utterance.volume = 1
-    utterance.onend = () => {
+
+    let finished = false
+    function finishUtterance() {
+      if (finished) {
+        return
+      }
+      finished = true
       speechUtteranceRef.current = null
-      setSpeakingMessageId(null)
       onDone?.()
     }
+
+    utterance.onend = () => {
+      finishUtterance()
+    }
     utterance.onerror = () => {
-      speechUtteranceRef.current = null
-      setSpeakingMessageId(null)
       setVoiceState('paused')
-      setVoiceError('Speech playback could not start on this device.')
+      finishUtterance()
     }
 
     speechUtteranceRef.current = utterance
@@ -588,7 +594,6 @@ function App() {
   }
 
   function deliverAiResponse(prompt) {
-    cancelQueuedConversationPlayback()
     const aiResponse = handleAsk(prompt)
     if (!aiResponse) {
       setVoiceState('idle')
@@ -598,31 +603,6 @@ function App() {
     speakText(aiResponse, 'female', () => {
       setVoiceState('idle')
     })
-  }
-
-  function handleConversationPlayback(entry) {
-    if (!hasSpeechSupport) {
-      setVoiceError('This browser does not support spoken playback.')
-      return
-    }
-
-    if (speakingMessageId === entry.id) {
-      if (fullPlaybackActiveRef.current) {
-        stopFullConversationPlayback()
-      } else {
-        stopSpeechPlayback()
-      }
-      return
-    }
-
-    cancelQueuedConversationPlayback()
-    setVoiceError('')
-    speakText(
-      entry.content,
-      entry.role === 'driver' ? 'male' : 'female',
-      undefined,
-      { messageId: entry.id },
-    )
   }
 
   function startLiveRecognition() {
@@ -686,7 +666,6 @@ function App() {
       recognitionRef.current = recognition
     }
 
-    cancelQueuedConversationPlayback()
     stopSpeechPlayback()
     setVoiceError('')
     finalTranscriptRef.current = ''
@@ -700,7 +679,6 @@ function App() {
       return
     }
 
-    cancelQueuedConversationPlayback()
     stopSpeechPlayback()
 
     const response =
@@ -761,29 +739,178 @@ function App() {
   }, [hasSpeechSupport])
 
   useEffect(() => {
-    if (!speakingMessageId) {
+    streamProgressRef.current = streamProgress
+  }, [streamProgress])
+
+  useEffect(() => {
+    if (!voiceChatOpen) {
+      return
+    }
+
+    const activeId = scriptedConversation[streamProgress.mi]?.id
+    if (!activeId) {
       return
     }
 
     window.requestAnimationFrame(() => {
-      document.getElementById(`conv-msg-${speakingMessageId}`)?.scrollIntoView({
+      document.getElementById(`conv-msg-${activeId}`)?.scrollIntoView({
         behavior: 'smooth',
         block: 'nearest',
       })
     })
-  }, [speakingMessageId])
+  }, [streamProgress.mi, streamProgress.wc, voiceChatOpen])
+
+  useEffect(() => {
+    if (!voiceChatOpen) {
+      return undefined
+    }
+
+    scriptDemoCancelledRef.current = false
+    clearScriptTimers()
+    const resetId = window.setTimeout(() => {
+      setStreamProgress({ mi: 0, wc: 0 })
+      setFullDemoActive(false)
+    }, 0)
+
+    return () => {
+      scriptDemoCancelledRef.current = true
+      window.clearTimeout(resetId)
+      clearScriptTimers()
+      window.speechSynthesis.cancel()
+      speechUtteranceRef.current = null
+    }
+  }, [voiceChatOpen])
+
+  function playScriptMessageAtIndex(mi, onComplete) {
+    const entry = scriptedConversation[mi]
+    if (!entry) {
+      onComplete?.()
+      return
+    }
+
+    const words = entry.content.trim().split(/\s+/).filter(Boolean)
+
+    if (words.length === 0) {
+      setStreamProgress({ mi: mi + 1, wc: 0 })
+      onComplete?.()
+      return
+    }
+
+    let wi = 0
+
+    function wordDelayMs() {
+      return 48 + Math.floor(Math.random() * 72)
+    }
+
+    function wordTick() {
+      if (scriptDemoCancelledRef.current) {
+        setFullDemoActive(false)
+        return
+      }
+
+      wi += 1
+      setStreamProgress({ mi, wc: wi })
+
+      if (wi < words.length) {
+        const tid = window.setTimeout(wordTick, wordDelayMs())
+        scriptTimersRef.current.push(tid)
+        return
+      }
+
+      const tid = window.setTimeout(() => {
+        if (scriptDemoCancelledRef.current) {
+          setFullDemoActive(false)
+          return
+        }
+
+        const voice = entry.role === 'driver' ? 'male' : 'female'
+        if (!hasSpeechSupport) {
+          setStreamProgress({ mi: mi + 1, wc: 0 })
+          onComplete?.()
+          return
+        }
+        speakText(entry.content, voice, () => {
+          if (scriptDemoCancelledRef.current) {
+            setFullDemoActive(false)
+            return
+          }
+          setStreamProgress({ mi: mi + 1, wc: 0 })
+          onComplete?.()
+        })
+      }, 100)
+      scriptTimersRef.current.push(tid)
+    }
+
+    wordTick()
+  }
+
+  function startFullScriptDemo() {
+    if (fullDemoActive) {
+      return
+    }
+
+    const { mi } = streamProgressRef.current
+    if (mi >= scriptedConversation.length) {
+      return
+    }
+
+    scriptDemoCancelledRef.current = false
+    setFullDemoActive(true)
+
+    function runFrom(index) {
+      if (scriptDemoCancelledRef.current) {
+        setFullDemoActive(false)
+        return
+      }
+      if (index >= scriptedConversation.length) {
+        setFullDemoActive(false)
+        return
+      }
+      playScriptMessageAtIndex(index, () => runFrom(index + 1))
+    }
+
+    runFrom(mi)
+  }
+
+  function closeVoiceChat() {
+    scriptDemoCancelledRef.current = true
+    clearScriptTimers()
+    setFullDemoActive(false)
+    setVoiceChatOpen(false)
+    stopRecognition()
+    stopSpeechPlayback()
+    setVoiceError('')
+  }
+
+  function openVoiceChat() {
+    setVoiceChatOpen(true)
+  }
+
+  useEffect(() => {
+    if (!voiceChatOpen) {
+      return undefined
+    }
+
+    function onKeyDown(event) {
+      if (event.key === 'Escape') {
+        scriptDemoCancelledRef.current = true
+        clearScriptTimers()
+        setFullDemoActive(false)
+        setVoiceChatOpen(false)
+        stopRecognition()
+        stopSpeechPlayback()
+        setVoiceError('')
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [voiceChatOpen]) // eslint-disable-line react-hooks/exhaustive-deps -- bind once per open
 
   return (
     <div className="vetc-page">
       <div className="phone-shell">
-        <div className="status-bar">
-          <strong>12:51</strong>
-          <div className="status-icons">
-            <span />
-            <span />
-            <span className="status-battery">46</span>
-          </div>
-        </div>
+
 
         {activeTab === 'home' ? (
           <section className="hero-banner">
@@ -878,7 +1005,11 @@ function App() {
                   <button type="button" className="primary-action" onClick={() => setActiveTab('routes')}>
                     View AI route
                   </button>
-                  <button type="button" className="secondary-action" onClick={() => setActiveTab('assistant')}>
+                  <button
+                    type="button"
+                    className="secondary-action"
+                    onClick={() => setActiveTab('assistant')}
+                  >
                     Ask DriveMate
                   </button>
                 </div>
@@ -890,7 +1021,11 @@ function App() {
                   <h2>Fuel up 500 VND today</h2>
                   <p>Based on your weekly travel, choosing the AI route can reduce extra cost by around 80k.</p>
                 </div>
-                <button type="button" className="link-action" onClick={() => setActiveTab('assistant')}>
+                <button
+                  type="button"
+                  className="link-action"
+                  onClick={() => setActiveTab('assistant')}
+                >
                   View advice
                 </button>
               </section>
@@ -971,140 +1106,32 @@ function App() {
 
           {activeTab === 'assistant' ? (
             <>
-              <section className="assistant-modal surface-card">
-                <div className="assistant-head">
-                  <div>
-                    <p className="section-label green">DriveMate AI</p>
-                    <h2>Assistant for VETC drivers</h2>
-                  </div>
-                  <button
-                    type="button"
-                    className={voiceState === 'listening' || voiceState === 'transcribing' ? 'mic-button active' : 'mic-button'}
-                    onClick={() =>
-                      voiceState === 'listening' || voiceState === 'transcribing'
-                        ? stopRecognition()
-                        : startLiveRecognition()
-                    }
-                    aria-label="Start live speech to text"
-                  >
-                    <Icon name="sparkles" />
-                  </button>
-                </div>
-
-                <div className="assistant-summary">
-                  <div>
-                    <span>Smart wallet</span>
-                    <strong>{formatCurrency(walletBalance)}</strong>
-                  </div>
-                  <div>
-                    <span>Reward points</span>
-                    <strong>{rewardPoints}</strong>
-                  </div>
-                  <div>
-                    <span>Best departure</span>
-                    <strong>{commute.departureTime}</strong>
-                  </div>
-                </div>
-
-                <div className="prompt-chips">
-                  {quickPrompts.map((prompt) => (
-                    <button key={prompt} type="button" className="chip-button" onClick={() => handleAsk(prompt)}>
-                      {prompt}
-                    </button>
-                  ))}
-                </div>
-
-                {voiceError ? <p className="voice-error assistant-voice-error">{voiceError}</p> : null}
-
-                <section className="conversation-section">
-                  <div className="conversation-header">
-                    <div>
-                      <span className="section-label">Assistant chat</span>
-                      <strong>Route and wallet updates</strong>
-                    </div>
-                    <button
-                      type="button"
-                      className={isFullConversationPlaying ? 'record-thread-btn playing' : 'record-thread-btn'}
-                      onClick={playFullConversationThread}
-                      aria-label={
-                        isFullConversationPlaying ? 'Stop playing conversation' : 'Play full conversation aloud'
-                      }
-                    >
-                      {isFullConversationPlaying ? <Icon name="stop" /> : <Icon name="record" />}
-                    </button>
-                  </div>
-
-                  <div className="conversation-thread">
-                    {scriptedConversation.map((entry) => (
-                      <article
-                        id={`conv-msg-${entry.id}`}
-                        key={entry.id}
-                        className={entry.role === 'assistant' ? 'message-row assistant' : 'message-row driver'}
-                      >
-                        <div className="message-meta">
-                          <span className={entry.role === 'assistant' ? 'message-avatar assistant' : 'message-avatar driver'}>
-                            {entry.role === 'assistant' ? 'AI' : 'DR'}
-                          </span>
-                          <span className="message-name">
-                            {entry.role === 'assistant' ? 'DriveMate AI' : 'Driver'}
-                          </span>
-                        </div>
-
-                        <div className={entry.role === 'assistant' ? 'message-bubble assistant' : 'message-bubble driver'}>
-                          <p>{entry.content}</p>
-                          <button
-                            type="button"
-                            className={speakingMessageId === entry.id ? 'message-audio active' : 'message-audio'}
-                            onClick={() => handleConversationPlayback(entry)}
-                          >
-                            <Icon name="volume" />
-                            <span>{speakingMessageId === entry.id ? 'Stop' : 'Play'}</span>
-                          </button>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                </section>
-
-                <div className="chat-list">
-                  {messages.map((message, index) => (
-                    <article
-                      key={`${message.role}-${index}`}
-                      className={message.role === 'assistant' ? 'chat-card assistant' : 'chat-card user'}
-                    >
-                      <span>{message.role === 'assistant' ? 'DriveMate AI' : 'You'}</span>
-                      <p>{message.content}</p>
-                    </article>
-                  ))}
-                </div>
-
-                <form
-                  className="chat-composer"
-                  onSubmit={(event) => {
-                    event.preventDefault()
-                    handleAsk(draftMessage)
-                  }}
-                >
-                  <input
-                    type="text"
-                    value={draftMessage}
-                    onChange={(event) => setDraftMessage(event.target.value)}
-                    placeholder="Ask about route, fuel, wallet, rewards..."
-                  />
-                  <button type="submit" className="primary-action small">
-                    Send
-                  </button>
-                </form>
+              <section className="assistant-tab-headline surface-card">
+                <p className="section-label green">DriveMate AI</p>
+                <h2>Your driving assistant</h2>
+                <p className="assistant-tab-sub">
+                  Recent chats below. Open the floating AI button, then tap <strong>Play</strong> beside Send once to
+                  step through the demo—live captions and voices play one line at a time.
+                </p>
               </section>
 
-              <section className="surface-card info-card">
-                <p className="section-label">AI abilities</p>
-                <ul className="feature-list">
-                  <li>Predict destination from routine and recent trips.</li>
-                  <li>Compare route cost, time, and toll on a map view.</li>
-                  <li>Recommend top-up amount and fuel-saving timing.</li>
-                  <li>Play real browser text-to-speech when the device/browser supports it.</li>
-                  <li>Support rescue and vehicle reminders as part of VETC services.</li>
+              <section className="surface-card chat-history-card">
+                <div className="chat-history-head">
+                  <p className="section-label">Recent chats</p>
+                  <span className="chat-history-note">Older threads archive automatically</span>
+                </div>
+                <ul className="chat-history-list">
+                  {chatHistorySessions.map((session) => (
+                    <li key={session.id}>
+                      <button type="button" className="chat-history-item">
+                        <div className="chat-history-main">
+                          <strong>{session.title}</strong>
+                          <span className="chat-history-preview">{session.preview}</span>
+                        </div>
+                        <span className="chat-history-when">{session.when}</span>
+                      </button>
+                    </li>
+                  ))}
                 </ul>
               </section>
             </>
@@ -1141,7 +1168,11 @@ function App() {
                   <button type="button" className="primary-action" onClick={handleTopUp}>
                     Top up {formatCurrency(recommendedTopUp)}
                   </button>
-                  <button type="button" className="secondary-action" onClick={() => setActiveTab('assistant')}>
+                  <button
+                    type="button"
+                    className="secondary-action"
+                    onClick={() => setActiveTab('assistant')}
+                  >
                     Ask AI why
                   </button>
                 </div>
@@ -1205,12 +1236,205 @@ function App() {
           ) : null}
         </main>
 
-        <button type="button" className="floating-support" onClick={() => setActiveTab('assistant')}>
-          <span className="floating-ring">
-            <Icon name="sparkles" />
-          </span>
-          <small>AI</small>
-        </button>
+        {voiceChatOpen ? (
+          <div
+            className="voice-chat-overlay"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="voice-chat-title"
+          >
+            <button type="button" className="voice-chat-backdrop" onClick={closeVoiceChat} aria-label="Close voice chat" />
+            <div className="voice-chat-sheet">
+              <header className="voice-chat-top">
+                <div>
+                  <p className="section-label green">DriveMate AI</p>
+                  <h2 id="voice-chat-title">Voice chat</h2>
+                </div>
+                <div className="voice-chat-top-actions">
+                  <button
+                    type="button"
+                    className={voiceState === 'listening' || voiceState === 'transcribing' ? 'mic-button active' : 'mic-button'}
+                    onClick={() =>
+                      voiceState === 'listening' || voiceState === 'transcribing'
+                        ? stopRecognition()
+                        : startLiveRecognition()
+                    }
+                    aria-label="Speak to the assistant"
+                  >
+                    <Icon name="sparkles" />
+                  </button>
+                  <button type="button" className="voice-chat-close" onClick={closeVoiceChat} aria-label="Close">
+                    <Icon name="close" />
+                  </button>
+                </div>
+              </header>
+
+              <div className="voice-chat-body">
+                {streamProgress.mi >= scriptedConversation.length ? (
+                  <section className="voice-chat-preamble surface-card" aria-label="Earlier assistant context">
+                    {initialMessages.map((message, index) => (
+                      <article
+                        key={`preamble-${index}`}
+                        className={message.role === 'assistant' ? 'chat-card assistant' : 'chat-card user'}
+                      >
+                        <span>{message.role === 'assistant' ? 'DriveMate AI' : 'You'}</span>
+                        <p>{message.content}</p>
+                      </article>
+                    ))}
+                  </section>
+                ) : null}
+
+                {streamProgress.mi >= METRIC_DEPARTURE_AFTER_MI ||
+                streamProgress.mi >= METRIC_WALLET_AFTER_MI ||
+                streamProgress.mi >= METRIC_REWARDS_AFTER_MI ? (
+                  <div className="assistant-summary voice-chat-summary">
+                    {streamProgress.mi >= METRIC_DEPARTURE_AFTER_MI ? (
+                      <div>
+                        <span>Best departure</span>
+                        <strong>{commute.departureTime}</strong>
+                      </div>
+                    ) : null}
+                    {streamProgress.mi >= METRIC_WALLET_AFTER_MI ? (
+                      <div>
+                        <span>Smart wallet</span>
+                        <strong>{formatCurrency(walletBalance)}</strong>
+                      </div>
+                    ) : null}
+                    {streamProgress.mi >= METRIC_REWARDS_AFTER_MI ? (
+                      <div>
+                        <span>Reward points</span>
+                        <strong>{rewardPoints}</strong>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                <div className="prompt-chips">
+                  {quickPrompts.map((prompt) => (
+                    <button key={prompt} type="button" className="chip-button" onClick={() => handleAsk(prompt)}>
+                      {prompt}
+                    </button>
+                  ))}
+                </div>
+
+                {voiceError ? <p className="voice-error assistant-voice-error">{voiceError}</p> : null}
+
+                <section className="conversation-section voice-overlay-script">
+                  <div className="conversation-header assistant-demo-head">
+                    <div>
+                      <span className="section-label">Assistant chat</span>
+                      <strong>Route and wallet updates</strong>
+                    </div>
+                  </div>
+
+                  <div className="conversation-thread assistant-demo-thread">
+                    {scriptedConversation.map((entry, index) => {
+                      if (index > streamProgress.mi) {
+                        return null
+                      }
+
+                      const words = entry.content.trim().split(/\s+/).filter(Boolean)
+                      const displayText =
+                        index < streamProgress.mi
+                          ? entry.content
+                          : words.slice(0, streamProgress.wc).join(' ')
+
+                      if (!displayText) {
+                        return null
+                      }
+
+                      const showCursor =
+                        index === streamProgress.mi &&
+                        streamProgress.wc > 0 &&
+                        streamProgress.wc < words.length
+
+                      return (
+                        <article
+                          id={`conv-msg-${entry.id}`}
+                          key={entry.id}
+                          className={entry.role === 'assistant' ? 'message-row assistant' : 'message-row driver'}
+                        >
+                          <div className="message-meta">
+                            <span
+                              className={entry.role === 'assistant' ? 'message-avatar assistant' : 'message-avatar driver'}
+                            >
+                              {entry.role === 'assistant' ? 'AI' : 'DR'}
+                            </span>
+                            <span className="message-name">
+                              {entry.role === 'assistant' ? 'DriveMate AI' : 'Driver'}
+                            </span>
+                          </div>
+
+                          <div
+                            className={entry.role === 'assistant' ? 'message-bubble assistant' : 'message-bubble driver'}
+                          >
+                            <p className="message-stream-text">
+                              {displayText}
+                              {showCursor ? <span className="stream-cursor" aria-hidden="true" /> : null}
+                            </p>
+                          </div>
+                        </article>
+                      )
+                    })}
+                  </div>
+                </section>
+
+                <div className="chat-list">
+                  {messages.map((message, index) => (
+                    <article
+                      key={`${message.role}-${index}`}
+                      className={message.role === 'assistant' ? 'chat-card assistant' : 'chat-card user'}
+                    >
+                      <span>{message.role === 'assistant' ? 'DriveMate AI' : 'You'}</span>
+                      <p>{message.content}</p>
+                    </article>
+                  ))}
+                </div>
+
+                <form
+                  className="chat-composer chat-composer-row"
+                  onSubmit={(event) => {
+                    event.preventDefault()
+                    handleAsk(draftMessage)
+                  }}
+                >
+                  <input
+                    type="text"
+                    value={draftMessage}
+                    onChange={(event) => setDraftMessage(event.target.value)}
+                    placeholder="Ask about route, fuel, wallet, rewards..."
+                  />
+                  <div className="composer-action-group">
+                    <button
+                      type="button"
+                      className="composer-icon-btn"
+                      aria-label="Play scripted demo"
+                      title="Play demo"
+                      disabled={
+                        fullDemoActive || streamProgress.mi >= scriptedConversation.length
+                      }
+                      onClick={startFullScriptDemo}
+                    >
+                      <Icon name="play" />
+                    </button>
+                    <button type="submit" className="composer-icon-btn composer-send-btn" aria-label="Send">
+                      <Icon name="send" />
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {!voiceChatOpen ? (
+          <button type="button" className="floating-support" onClick={openVoiceChat}>
+            <span className="floating-ring">
+              <Icon name="sparkles" />
+            </span>
+            <small>AI Assistant</small>
+          </button>
+        ) : null}
 
         <nav className="bottom-nav" aria-label="Main">
           {bottomTabs.map((tab) => (
