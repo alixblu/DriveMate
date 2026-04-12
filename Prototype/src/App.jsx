@@ -157,14 +157,6 @@ const chatHistorySessions = [
   },
 ]
 
-const initialMessages = [
-  {
-    role: 'assistant',
-    content:
-      'Hi Alex, I already predicted your office commute. The AI route gets you there in 24 minutes with balanced toll and fuel cost.',
-  },
-]
-
 const scriptedConversation = [
   {
     id: 'c1',
@@ -254,10 +246,35 @@ const scriptedConversation = [
   { id: 'c31', role: 'assistant', content: 'Navigation is active. Have a safe trip!' },
 ]
 
-/** Assistant-summary metrics unlock after these script message indices (0-based). */
-const METRIC_DEPARTURE_AFTER_MI = 12
-const METRIC_WALLET_AFTER_MI = 18
-const METRIC_REWARDS_AFTER_MI = 21
+/** Trip context rows unlock when this script line index is reached (0-based, matches scriptedConversation). */
+const VOICE_CTX_DEST_MI = 0
+const VOICE_CTX_ROUTE_MI = 2
+const VOICE_CTX_BONUS_MI = 7
+const VOICE_CTX_NEXT_ACTION_MI = 12
+
+/** Scripted demo copy aligned with convo.txt / c3 line. */
+const voiceDemoTrip = {
+  destination: "People's Committee Office",
+  routeLabel: 'Best Value',
+  etaMins: 35,
+  tollSummary: '2 stations • 30k each',
+  bonusLine: 'Coffee reminder on the way',
+}
+
+/** Pace on-screen word reveals to roughly match Web Speech TTS length for the same line. */
+function estimateScriptLineSpeechMs(text, preferredVoice) {
+  const words = text
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+  if (words.length === 0) {
+    return 0
+  }
+  const rate = preferredVoice === 'male' ? 0.98 : 1
+  const wpm = 140 * rate
+  const minutes = words.length / wpm
+  return Math.max(720, minutes * 60 * 1000)
+}
 
 function formatCurrency(value) {
   return `${value}k`
@@ -413,10 +430,15 @@ function Icon({ name }) {
           <path {...commonProps} d="M18 6 6 18M6 6l12 12" />
         </svg>
       )
-    case 'play':
+    case 'mic':
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path fill="currentColor" stroke="none" d="M9 6.5v11l9-5.5L9 6.5Z" />
+          <path
+            {...commonProps}
+            d="M12 14a3 3 0 0 0 3-3V7a3 3 0 0 0-6 0v4a3 3 0 0 0 3 3Z"
+          />
+          <path {...commonProps} d="M19 11a7 7 0 0 1-14 0" />
+          <path {...commonProps} d="M12 18v3" />
         </svg>
       )
     case 'send':
@@ -760,27 +782,6 @@ function App() {
     })
   }, [streamProgress.mi, streamProgress.wc, voiceChatOpen])
 
-  useEffect(() => {
-    if (!voiceChatOpen) {
-      return undefined
-    }
-
-    scriptDemoCancelledRef.current = false
-    clearScriptTimers()
-    const resetId = window.setTimeout(() => {
-      setStreamProgress({ mi: 0, wc: 0 })
-      setFullDemoActive(false)
-    }, 0)
-
-    return () => {
-      scriptDemoCancelledRef.current = true
-      window.clearTimeout(resetId)
-      clearScriptTimers()
-      window.speechSynthesis.cancel()
-      speechUtteranceRef.current = null
-    }
-  }, [voiceChatOpen])
-
   function playScriptMessageAtIndex(mi, onComplete) {
     const entry = scriptedConversation[mi]
     if (!entry) {
@@ -796,10 +797,26 @@ function App() {
       return
     }
 
-    let wi = 0
+    const voice = entry.role === 'driver' ? 'male' : 'female'
+    const estimatedSpeechMs = estimateScriptLineSpeechMs(entry.content, voice)
+    const gapMs =
+      words.length <= 1 ? 0 : Math.max(32, Math.round(estimatedSpeechMs / (words.length - 1)))
 
-    function wordDelayMs() {
-      return 48 + Math.floor(Math.random() * 72)
+    let wi = 0
+    let streamDone = false
+    let speechDone = !hasSpeechSupport
+    let speechStarted = false
+
+    function tryFinishLine() {
+      if (!streamDone || !speechDone) {
+        return
+      }
+      if (scriptDemoCancelledRef.current) {
+        setFullDemoActive(false)
+        return
+      }
+      setStreamProgress({ mi: mi + 1, wc: 0 })
+      onComplete?.()
     }
 
     function wordTick() {
@@ -811,41 +828,43 @@ function App() {
       wi += 1
       setStreamProgress({ mi, wc: wi })
 
-      if (wi < words.length) {
-        const tid = window.setTimeout(wordTick, wordDelayMs())
-        scriptTimersRef.current.push(tid)
-        return
-      }
-
-      const tid = window.setTimeout(() => {
-        if (scriptDemoCancelledRef.current) {
-          setFullDemoActive(false)
-          return
-        }
-
-        const voice = entry.role === 'driver' ? 'male' : 'female'
-        if (!hasSpeechSupport) {
-          setStreamProgress({ mi: mi + 1, wc: 0 })
-          onComplete?.()
-          return
-        }
+      if (hasSpeechSupport && wi === 1 && !speechStarted) {
+        speechStarted = true
         speakText(entry.content, voice, () => {
           if (scriptDemoCancelledRef.current) {
             setFullDemoActive(false)
             return
           }
-          setStreamProgress({ mi: mi + 1, wc: 0 })
-          onComplete?.()
+          if (wi < words.length) {
+            clearScriptTimers()
+            wi = words.length
+            setStreamProgress({ mi, wc: words.length })
+            streamDone = true
+          }
+          speechDone = true
+          tryFinishLine()
         })
-      }, 100)
-      scriptTimersRef.current.push(tid)
+      }
+
+      if (wi < words.length) {
+        const tid = window.setTimeout(wordTick, gapMs)
+        scriptTimersRef.current.push(tid)
+        return
+      }
+
+      streamDone = true
+      if (!hasSpeechSupport) {
+        speechDone = true
+      }
+      tryFinishLine()
     }
 
     wordTick()
   }
 
-  function startFullScriptDemo() {
-    if (fullDemoActive) {
+  function startFullScriptDemo(options = {}) {
+    const force = options.force === true
+    if (!force && fullDemoActive) {
       return
     }
 
@@ -871,6 +890,35 @@ function App() {
 
     runFrom(mi)
   }
+
+  useEffect(() => {
+    if (!voiceChatOpen) {
+      return undefined
+    }
+
+    scriptDemoCancelledRef.current = false
+    clearScriptTimers()
+    let startId = null
+    const resetId = window.setTimeout(() => {
+      setStreamProgress({ mi: 0, wc: 0 })
+      setFullDemoActive(false)
+      streamProgressRef.current = { mi: 0, wc: 0 }
+      startId = window.setTimeout(() => {
+        startFullScriptDemo({ force: true })
+      }, 0)
+    }, 0)
+
+    return () => {
+      scriptDemoCancelledRef.current = true
+      window.clearTimeout(resetId)
+      if (startId !== null) {
+        window.clearTimeout(startId)
+      }
+      clearScriptTimers()
+      window.speechSynthesis.cancel()
+      speechUtteranceRef.current = null
+    }
+  }, [voiceChatOpen]) // eslint-disable-line react-hooks/exhaustive-deps -- start demo only when sheet opens; startFullScriptDemo is stable enough per open
 
   function closeVoiceChat() {
     scriptDemoCancelledRef.current = true
@@ -906,6 +954,20 @@ function App() {
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [voiceChatOpen]) // eslint-disable-line react-hooks/exhaustive-deps -- bind once per open
+
+  const voiceScriptHasStarted =
+    fullDemoActive ||
+    streamProgress.mi > 0 ||
+    streamProgress.wc > 0 ||
+    streamProgress.mi >= scriptedConversation.length
+
+  const showVoiceDestination = voiceScriptHasStarted && streamProgress.mi >= VOICE_CTX_DEST_MI
+  const showVoiceRouteBlock = voiceScriptHasStarted && streamProgress.mi >= VOICE_CTX_ROUTE_MI
+  const showVoiceBonus = voiceScriptHasStarted && streamProgress.mi >= VOICE_CTX_BONUS_MI
+  const showVoiceNextAction = voiceScriptHasStarted && streamProgress.mi >= VOICE_CTX_NEXT_ACTION_MI
+
+  const showVoiceTripContext =
+    showVoiceDestination || showVoiceRouteBlock || showVoiceBonus || showVoiceNextAction
 
   return (
     <div className="vetc-page">
@@ -1110,8 +1172,8 @@ function App() {
                 <p className="section-label green">DriveMate AI</p>
                 <h2>Your driving assistant</h2>
                 <p className="assistant-tab-sub">
-                  Recent chats below. Open the floating AI button, then tap <strong>Play</strong> beside Send once to
-                  step through the demo—live captions and voices play one line at a time.
+                  Recent chats below. Open the floating AI button—the voice demo starts automatically with live captions
+                  and speech.
                 </p>
               </section>
 
@@ -1162,6 +1224,10 @@ function App() {
                   <div>
                     <span>AI top-up suggestion</span>
                     <strong>{formatCurrency(recommendedTopUp)}</strong>
+                  </div>
+                  <div>
+                    <span>Reward points</span>
+                    <strong>{rewardPoints.toLocaleString()}</strong>
                   </div>
                 </div>
                 <div className="button-row">
@@ -1245,10 +1311,16 @@ function App() {
           >
             <button type="button" className="voice-chat-backdrop" onClick={closeVoiceChat} aria-label="Close voice chat" />
             <div className="voice-chat-sheet">
+              <div className="voice-chat-handle" aria-hidden="true" />
               <header className="voice-chat-top">
-                <div>
-                  <p className="section-label green">DriveMate AI</p>
-                  <h2 id="voice-chat-title">Voice chat</h2>
+                <div className="voice-chat-brand">
+                  <span className="voice-chat-brand-mark" aria-hidden="true">
+                    <Icon name="sparkles" />
+                  </span>
+                  <div>
+                    <p className="section-label green">DriveMate AI</p>
+                    <h2 id="voice-chat-title">Voice chat</h2>
+                  </div>
                 </div>
                 <div className="voice-chat-top-actions">
                   <button
@@ -1270,158 +1342,168 @@ function App() {
               </header>
 
               <div className="voice-chat-body">
-                {streamProgress.mi >= scriptedConversation.length ? (
-                  <section className="voice-chat-preamble surface-card" aria-label="Earlier assistant context">
-                    {initialMessages.map((message, index) => (
+                <div className="voice-chat-scroll">
+                  {showVoiceTripContext ? (
+                    <section className="voice-trip-context surface-card" aria-label="Trip context">
+                      <h3 className="voice-trip-context-title">Trip context</h3>
+                      <div className="voice-trip-facts">
+                        {showVoiceDestination ? (
+                          <div className="voice-trip-fact">
+                            <span className="voice-trip-fact-label">Destination</span>
+                            <span className="voice-trip-fact-value">{voiceDemoTrip.destination}</span>
+                          </div>
+                        ) : null}
+                        {showVoiceRouteBlock ? (
+                          <>
+                            <div className="voice-trip-fact">
+                              <span className="voice-trip-fact-label">Route Selected</span>
+                              <span className="voice-trip-fact-value">{voiceDemoTrip.routeLabel}</span>
+                            </div>
+                            <div className="voice-trip-fact">
+                              <span className="voice-trip-fact-label">ETA</span>
+                              <span className="voice-trip-fact-value">{voiceDemoTrip.etaMins} mins</span>
+                            </div>
+                            <div className="voice-trip-fact">
+                              <span className="voice-trip-fact-label">Toll</span>
+                              <span className="voice-trip-fact-value">{voiceDemoTrip.tollSummary}</span>
+                            </div>
+                          </>
+                        ) : null}
+                        {showVoiceNextAction ? (
+                          <div className="voice-trip-fact">
+                            <span className="voice-trip-fact-label">Next Action</span>
+                            <span className="voice-trip-fact-value">
+                              Leave before {commute.departureTime}
+                            </span>
+                          </div>
+                        ) : null}
+                        {showVoiceBonus ? (
+                          <div className="voice-trip-fact voice-trip-fact-bonus">
+                            <span className="voice-trip-fact-label">Bonus</span>
+                            <span className="voice-trip-fact-value">{voiceDemoTrip.bonusLine}</span>
+                          </div>
+                        ) : null}
+                      </div>
+                    </section>
+                  ) : null}
+
+                  {voiceError ? <p className="voice-error assistant-voice-error">{voiceError}</p> : null}
+
+                  <section className="conversation-section voice-overlay-script">
+                    <div className="conversation-header assistant-demo-head">
+                      <div>
+                        <span className="section-label">Assistant chat</span>
+                      </div>
+                    </div>
+
+                    <div className="conversation-thread assistant-demo-thread">
+                      {scriptedConversation.map((entry, index) => {
+                        if (index > streamProgress.mi) {
+                          return null
+                        }
+
+                        const words = entry.content.trim().split(/\s+/).filter(Boolean)
+                        const displayText =
+                          index < streamProgress.mi
+                            ? entry.content
+                            : words.slice(0, streamProgress.wc).join(' ')
+
+                        if (!displayText) {
+                          return null
+                        }
+
+                        const showCursor =
+                          index === streamProgress.mi &&
+                          streamProgress.wc > 0 &&
+                          streamProgress.wc < words.length
+
+                        return (
+                          <article
+                            id={`conv-msg-${entry.id}`}
+                            key={entry.id}
+                            className={entry.role === 'assistant' ? 'message-row assistant' : 'message-row driver'}
+                          >
+                            <div className="message-meta">
+                              <span
+                                className={entry.role === 'assistant' ? 'message-avatar assistant' : 'message-avatar driver'}
+                              >
+                                {entry.role === 'assistant' ? 'AI' : 'DR'}
+                              </span>
+                              <span className="message-name">
+                                {entry.role === 'assistant' ? 'DriveMate AI' : 'Driver'}
+                              </span>
+                            </div>
+
+                            <div
+                              className={entry.role === 'assistant' ? 'message-bubble assistant' : 'message-bubble driver'}
+                            >
+                              <p className="message-stream-text">
+                                {displayText}
+                                {showCursor ? <span className="stream-cursor" aria-hidden="true" /> : null}
+                              </p>
+                            </div>
+                          </article>
+                        )
+                      })}
+                    </div>
+                  </section>
+
+                  <div className="chat-list">
+                    {messages.map((message, index) => (
                       <article
-                        key={`preamble-${index}`}
+                        key={`${message.role}-${index}`}
                         className={message.role === 'assistant' ? 'chat-card assistant' : 'chat-card user'}
                       >
                         <span>{message.role === 'assistant' ? 'DriveMate AI' : 'You'}</span>
                         <p>{message.content}</p>
                       </article>
                     ))}
-                  </section>
-                ) : null}
-
-                {streamProgress.mi >= METRIC_DEPARTURE_AFTER_MI ||
-                streamProgress.mi >= METRIC_WALLET_AFTER_MI ||
-                streamProgress.mi >= METRIC_REWARDS_AFTER_MI ? (
-                  <div className="assistant-summary voice-chat-summary">
-                    {streamProgress.mi >= METRIC_DEPARTURE_AFTER_MI ? (
-                      <div>
-                        <span>Best departure</span>
-                        <strong>{commute.departureTime}</strong>
-                      </div>
-                    ) : null}
-                    {streamProgress.mi >= METRIC_WALLET_AFTER_MI ? (
-                      <div>
-                        <span>Smart wallet</span>
-                        <strong>{formatCurrency(walletBalance)}</strong>
-                      </div>
-                    ) : null}
-                    {streamProgress.mi >= METRIC_REWARDS_AFTER_MI ? (
-                      <div>
-                        <span>Reward points</span>
-                        <strong>{rewardPoints}</strong>
-                      </div>
-                    ) : null}
                   </div>
-                ) : null}
-
-                <div className="prompt-chips">
-                  {quickPrompts.map((prompt) => (
-                    <button key={prompt} type="button" className="chip-button" onClick={() => handleAsk(prompt)}>
-                      {prompt}
-                    </button>
-                  ))}
                 </div>
 
-                {voiceError ? <p className="voice-error assistant-voice-error">{voiceError}</p> : null}
-
-                <section className="conversation-section voice-overlay-script">
-                  <div className="conversation-header assistant-demo-head">
-                    <div>
-                      <span className="section-label">Assistant chat</span>
-                      <strong>Route and wallet updates</strong>
+                <div className="voice-chat-composer-dock">
+                  <div className="voice-quick-asks">
+                    <span className="voice-quick-asks-label">Quick asks</span>
+                    <div className="prompt-chips prompt-chips-dock" role="group" aria-label="Quick prompts">
+                      {quickPrompts.map((prompt) => (
+                        <button key={prompt} type="button" className="chip-button" onClick={() => handleAsk(prompt)}>
+                          {prompt}
+                        </button>
+                      ))}
                     </div>
                   </div>
-
-                  <div className="conversation-thread assistant-demo-thread">
-                    {scriptedConversation.map((entry, index) => {
-                      if (index > streamProgress.mi) {
-                        return null
-                      }
-
-                      const words = entry.content.trim().split(/\s+/).filter(Boolean)
-                      const displayText =
-                        index < streamProgress.mi
-                          ? entry.content
-                          : words.slice(0, streamProgress.wc).join(' ')
-
-                      if (!displayText) {
-                        return null
-                      }
-
-                      const showCursor =
-                        index === streamProgress.mi &&
-                        streamProgress.wc > 0 &&
-                        streamProgress.wc < words.length
-
-                      return (
-                        <article
-                          id={`conv-msg-${entry.id}`}
-                          key={entry.id}
-                          className={entry.role === 'assistant' ? 'message-row assistant' : 'message-row driver'}
-                        >
-                          <div className="message-meta">
-                            <span
-                              className={entry.role === 'assistant' ? 'message-avatar assistant' : 'message-avatar driver'}
-                            >
-                              {entry.role === 'assistant' ? 'AI' : 'DR'}
-                            </span>
-                            <span className="message-name">
-                              {entry.role === 'assistant' ? 'DriveMate AI' : 'Driver'}
-                            </span>
-                          </div>
-
-                          <div
-                            className={entry.role === 'assistant' ? 'message-bubble assistant' : 'message-bubble driver'}
-                          >
-                            <p className="message-stream-text">
-                              {displayText}
-                              {showCursor ? <span className="stream-cursor" aria-hidden="true" /> : null}
-                            </p>
-                          </div>
-                        </article>
-                      )
-                    })}
-                  </div>
-                </section>
-
-                <div className="chat-list">
-                  {messages.map((message, index) => (
-                    <article
-                      key={`${message.role}-${index}`}
-                      className={message.role === 'assistant' ? 'chat-card assistant' : 'chat-card user'}
-                    >
-                      <span>{message.role === 'assistant' ? 'DriveMate AI' : 'You'}</span>
-                      <p>{message.content}</p>
-                    </article>
-                  ))}
+                  <form
+                    className="chat-composer chat-composer-row"
+                    onSubmit={(event) => {
+                      event.preventDefault()
+                      handleAsk(draftMessage)
+                    }}
+                  >
+                    <input
+                      type="text"
+                      value={draftMessage}
+                      onChange={(event) => setDraftMessage(event.target.value)}
+                      placeholder="Ask about route, fuel, wallet, rewards..."
+                    />
+                    <div className="composer-action-group">
+                      <button
+                        type="button"
+                        className="composer-icon-btn"
+                        aria-label="Start voice demo"
+                        title="Voice demo"
+                        disabled={
+                          fullDemoActive || streamProgress.mi >= scriptedConversation.length
+                        }
+                        onClick={() => startFullScriptDemo()}
+                      >
+                        <Icon name="mic" />
+                      </button>
+                      <button type="submit" className="composer-icon-btn composer-send-btn" aria-label="Send">
+                        <Icon name="send" />
+                      </button>
+                    </div>
+                  </form>
                 </div>
-
-                <form
-                  className="chat-composer chat-composer-row"
-                  onSubmit={(event) => {
-                    event.preventDefault()
-                    handleAsk(draftMessage)
-                  }}
-                >
-                  <input
-                    type="text"
-                    value={draftMessage}
-                    onChange={(event) => setDraftMessage(event.target.value)}
-                    placeholder="Ask about route, fuel, wallet, rewards..."
-                  />
-                  <div className="composer-action-group">
-                    <button
-                      type="button"
-                      className="composer-icon-btn"
-                      aria-label="Play scripted demo"
-                      title="Play demo"
-                      disabled={
-                        fullDemoActive || streamProgress.mi >= scriptedConversation.length
-                      }
-                      onClick={startFullScriptDemo}
-                    >
-                      <Icon name="play" />
-                    </button>
-                    <button type="submit" className="composer-icon-btn composer-send-btn" aria-label="Send">
-                      <Icon name="send" />
-                    </button>
-                  </div>
-                </form>
               </div>
             </div>
           </div>

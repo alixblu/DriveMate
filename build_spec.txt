@@ -1,0 +1,471 @@
+DRIVEMATE AI – FULL DEMO BUILD SPEC (HACKATHON MVP)
+
+==================================================
+
+PRODUCT SUMMARY
+==================================================
+
+DriveMate AI is an AI mobility assistant integrated into VETC that increases daily engagement by helping drivers save time, reduce travel cost, and build smarter habits.
+
+Instead of opening the app only to pay tolls, users open it daily for personalized mobility insights.
+
+Core business KPI:
+
+Increase DAU
+Improve retention
+Increase wallet usage
+Create upsell / partner reward opportunities
+==================================================
+2. TARGET USERS
+Daily commuters
+Go to work/school regularly
+Care about time + traffic
+Cost-sensitive drivers
+Care about toll + fuel spending
+Frequent highway users
+Use VETC often
+Car owners who like analytics
+Curious about habits, scores, reports
+==================================================
+3. CORE USER JOURNEY
+
+MORNING
+
+Push notification sent
+User opens app
+Sees Today Commute Card
+Gets recommendation
+
+BEFORE TRIP
+
+User checks route options
+Sees ETA / toll / fuel estimates
+
+DURING TRIP
+
+Voice assistant active
+Hands-free questions
+
+AFTER TRIP
+
+Trip summary shown
+Points awarded
+
+WEEKLY
+
+Insight report generated
+==================================================
+4. MAIN FEATURES
+A. HOME DASHBOARD
+
+Sections:
+
+Greeting
+Good morning, Alex
+Today Commute Card
+Display:
+Predicted destination
+ETA
+Toll cost
+Fuel cost
+Best departure time
+Traffic level
+
+Example:
+Office
+25 mins
+Toll: 35k
+Fuel: 40k
+Leave at 8:10 AM
+
+Quick Actions
+Start Drive
+Ask AI
+Wallet
+Rewards
+Reports
+Personalized Insight Card
+Dynamic topic:
+Fuel
+Traffic
+Rewards
+Maintenance
+Budget
+Recent Trips
+B. AI DESTINATION PREDICTION
+
+Purpose:
+Predict where user is likely going.
+
+Inputs:
+
+Day of week
+Time
+Past trips
+Location history (mocked)
+Calendar optional
+
+Rules MVP:
+
+Monday-Friday 7AM = Office
+Weekend 9AM = Cafe / Mall
+Friday evening = Home
+
+Output:
+Likely destination + confidence %
+
+Example:
+Office (82%)
+
+C. COMMUTE RECOMMENDATION ENGINE
+
+Show 2-3 route options:
+
+Route A
+
+20 mins
+Toll 50k
+Fuel 45k
+
+Route B
+
+28 mins
+Toll 20k
+Fuel 35k
+
+Route C
+
+24 mins
+Balanced
+
+Badges:
+
+Fastest
+Cheapest
+Best Value
+
+Logic:
+Score = weighted(time, toll, fuel)
+
+==================================================
+5. FUEL INTELLIGENCE MODULE
+
+Daily fuel price feature.
+
+Data:
+
+Fuel price today
+Yesterday price
+Trend
+
+Display:
+Fuel price: 24,300/L
++500 from yesterday
+
+Personalized message:
+Based on your weekly travel, cost may increase by 80k.
+
+Actions:
+
+Refuel now
+Choose fuel-saving route
+See weekly fuel report
+
+Extra:
+Fuel-saving tips:
+
+Avoid peak traffic
+Smooth acceleration
+Combine errands
+==================================================
+6. SMART NOTIFICATION ENGINE
+
+Purpose:
+Increase opens.
+
+Types:
+
+Traffic Alert
+Heavy traffic on usual route. Leave 15 mins earlier.
+Fuel Alert
+Fuel +500 VND. Refuel today to save.
+Wallet Alert
+Balance low for expected trip.
+Reward Alert
+Drive today to earn bonus points.
+Weekly Report Alert
+You saved 2 hours this week.
+
+Logic:
+Choose highest relevance topic.
+
+==================================================
+7. USER INTEREST MODEL
+
+Track topic scores:
+
+Topics:
+
+Fuel
+Traffic
+Rewards
+Budget
+Maintenance
+
+Actions:
+Open topic +3
+Click +5
+Long read +2
+Ignore -2
+Hide -10
+
+Use highest score topic on dashboard + notifications.
+
+Store:
+user_interest_scores table
+
+==================================================
+8. VOICE AI ASSISTANT
+
+UI:
+Mic button + chat panel
+
+Example prompts:
+
+How long to office?
+Cheapest route today?
+How much fuel this week?
+Any traffic ahead?
+Show my rewards
+
+Mock responses:
+Use predefined templates.
+
+Optional:
+Text input if voice not built.
+
+==================================================
+9. DRIVING INSIGHTS MODULE
+
+Daily / Weekly reports.
+
+Metrics:
+
+Trips completed
+Time on road
+Time in traffic
+Toll spent
+Fuel spent
+Money saved
+Best travel time
+Preferred route type
+
+Examples:
+You spent 5h driving this week.
+Leaving 10 mins earlier saved 45 mins.
+You prefer fast routes 70% of time.
+
+==================================================
+10. REWARDS SYSTEM
+
+Points earned from:
+
+Daily app open = 5
+Complete trip = 10
+Use recommended route = 15
+Fuel-efficient route = 20
+5-day streak = bonus
+
+Redeem:
+
+Toll discount
+Car wash
+Coffee
+Parking
+Partner vouchers
+
+UI:
+Current points
+Rewards catalog
+History
+
+==================================================
+11. SMART WALLET MODULE
+
+Display:
+
+Current balance
+Estimated weekly toll spend
+Auto top-up suggestion
+
+Example:
+Balance: 120k
+Expected spend this week: 300k
+Recommended top-up: 200k
+
+==================================================
+12. OPTIONAL VEHICLE HEALTH MODULE
+
+Simple reminders:
+
+Tire pressure check
+Oil change due
+Insurance renewal
+Battery check
+
+Mock only.
+
+==================================================
+13. DEMO DATA MODELS
+
+User
+
+id
+name
+car_type
+home_location
+work_location
+
+Trip
+
+id
+date
+start
+destination
+route_type
+duration
+toll_cost
+fuel_cost
+
+FuelPrice
+
+date
+price
+delta
+
+RewardTransaction
+
+points
+reason
+date
+
+InterestScore
+
+topic
+score
+
+Wallet
+
+balance
+==================================================
+14. TECH STACK (FAST BUILD)
+
+Frontend:
+
+Next.js / React
+or
+Flutter
+
+Backend:
+
+Node.js Express
+or
+FastAPI
+
+Database:
+
+Supabase / Firebase / SQLite
+
+Auth:
+
+Mock login
+
+Maps:
+
+Static map screenshot or map API optional
+
+AI:
+
+Rules engine first
+LLM for chatbot responses
+Simple recommendation logic
+==================================================
+15. SCREEN LIST
+Splash
+Login
+Home Dashboard
+Route Comparison
+Voice AI Screen
+Fuel Insights
+Weekly Report
+Rewards
+Wallet
+Profile / Settings
+==================================================
+16. DEMO SCRIPT (3 MINUTES)
+Open app
+Show dashboard.
+Today commute predicted
+Office in 25 mins.
+Compare routes
+Fastest vs cheapest.
+Fuel price alert
+Show personal impact.
+Ask AI:
+Cheapest route today?
+Complete trip
+Earn points.
+Show weekly report.
+
+Close with KPI:
+More reasons to open daily.
+
+==================================================
+17. WHAT TO FAKE / MOCK
+
+Use fake data for:
+
+GPS
+Live traffic
+Fuel prices
+Voice transcription
+Rewards partners
+Prediction confidence
+Notifications
+
+That is completely acceptable in hackathon.
+
+==================================================
+18. WHAT TO BUILD FIRST (PRIORITY)
+
+PHASE 1 (must have)
+
+Dashboard
+Commute card
+Route compare
+Fuel alert
+Rewards
+
+PHASE 2
+
+AI chat
+Weekly report
+Wallet
+
+PHASE 3
+
+Personalization engine
+Animations
+Polish
+==================================================
+19. JUDGE TALKING POINTS
+Solves real DAU problem
+Uses AI meaningfully
+Personalized experience
+Direct business value
+Expandable ecosystem
+Strong user retention loop
+==================================================
+20. FINAL ONE-LINER
+
+DriveMate AI transforms VETC from a toll payment utility into a daily AI mobility companion that helps users save time, reduce cost, and earn rewards every trip.

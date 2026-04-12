@@ -1,0 +1,61 @@
+Driver: Hi, I’m about to head to the People’s Committee office. What’s the best route today?
+
+AI: I found 3 options:
+
+Best Value Route — 35 mins, 2 toll stations, Toll 30k each.
+
+AI: I recommend Best Value because it saves 20k with only 4 extra minutes.
+
+AI: There are also 2 other options: Fastest Route and Cheapest Route, if you’d like to hear them.
+
+Driver: Just start the best route.
+
+AI: Starting Best Value Route now.
+
+AI: There is a Highlands Coffee on the way. Would you like to grab one as usual? I can remind you when you’re nearby.
+
+Driver: Yes, remind me when I’m close.
+
+AI: Sure. I’ll remind you when you’re near the coffee shop.
+
+Driver: Any traffic I should know about?
+
+AI: Yes. Heavy congestion is building on your usual highway route.
+
+AI: Leaving before 8:10 AM can save around 12 minutes.
+
+Driver: How about fuel prices today?
+
+AI: Fuel increased by 500 VND/L today.
+
+AI: Based on your weekly driving pattern, your cost may rise by about 80k this week.
+
+AI: Choosing the fuel-efficient route can reduce that impact.
+
+Driver: Do I need to top up my wallet?
+
+AI: Your wallet balance is 120k.
+
+AI: Estimated toll spending for the next few trips is 300k.
+
+AI: I recommend topping up 200k.
+
+Driver: How many reward points do I have?
+
+AI: You currently have 1,250 points.
+
+AI: You can redeem a coffee voucher or parking discount today.
+
+Driver: How did I do this week?
+
+AI: This week you completed 12 trips.
+
+AI: You saved 120k using smart routes.
+
+AI: You also reduced travel time by 45 minutes.
+
+AI: Great job!
+
+Driver: Nice.
+
+AI: Navigation is active. Have a safe trip!
