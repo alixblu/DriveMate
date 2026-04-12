@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 
 const user = {
@@ -84,6 +84,8 @@ const promptResponses = {
     'Yes. Your expected toll spend is 300k and your wallet is only 120k. I suggest a 200k top-up to stay safe.',
   'Any traffic ahead?':
     'Traffic is building near Cat Lai and the expressway merge. The AI route avoids the worst slowdown and keeps toll spend moderate.',
+  'Show my rewards':
+    'You currently have 1,250 reward points. One more recommended commute unlocks the next toll discount reward.',
 }
 
 const articleCards = [
@@ -136,8 +138,114 @@ const initialMessages = [
   },
 ]
 
+const scriptedConversation = [
+  {
+    id: 'c1',
+    role: 'driver',
+    content:
+      "Hi, I'm about to head to the People's Committee office. What's the best route today?",
+  },
+  { id: 'c2', role: 'assistant', content: 'I found 3 options:' },
+  {
+    id: 'c3',
+    role: 'assistant',
+    content: 'Best Value Route — 35 mins, 2 toll stations, Toll 30k each.',
+  },
+  {
+    id: 'c4',
+    role: 'assistant',
+    content: 'I recommend Best Value because it saves 20k with only 4 extra minutes.',
+  },
+  {
+    id: 'c5',
+    role: 'assistant',
+    content:
+      "There are also 2 other options: Fastest Route and Cheapest Route, if you'd like to hear them.",
+  },
+  { id: 'c6', role: 'driver', content: 'Just start the best route.' },
+  { id: 'c7', role: 'assistant', content: 'Starting Best Value Route now.' },
+  {
+    id: 'c8',
+    role: 'assistant',
+    content:
+      "There is a Highlands Coffee on the way. Would you like to grab one as usual? I can remind you when you're nearby.",
+  },
+  { id: 'c9', role: 'driver', content: "Yes, remind me when I'm close." },
+  {
+    id: 'c10',
+    role: 'assistant',
+    content: "Sure. I'll remind you when you're near the coffee shop.",
+  },
+  { id: 'c11', role: 'driver', content: 'Any traffic I should know about?' },
+  {
+    id: 'c12',
+    role: 'assistant',
+    content: 'Yes. Heavy congestion is building on your usual highway route.',
+  },
+  {
+    id: 'c13',
+    role: 'assistant',
+    content: 'Leaving before 8:10 AM can save around 12 minutes.',
+  },
+  { id: 'c14', role: 'driver', content: 'How about fuel prices today?' },
+  { id: 'c15', role: 'assistant', content: 'Fuel increased by 500 VND/L today.' },
+  {
+    id: 'c16',
+    role: 'assistant',
+    content: 'Based on your weekly driving pattern, your cost may rise by about 80k this week.',
+  },
+  {
+    id: 'c17',
+    role: 'assistant',
+    content: 'Choosing the fuel-efficient route can reduce that impact.',
+  },
+  { id: 'c18', role: 'driver', content: 'Do I need to top up my wallet?' },
+  { id: 'c19', role: 'assistant', content: 'Your wallet balance is 120k.' },
+  {
+    id: 'c20',
+    role: 'assistant',
+    content: 'Estimated toll spending for the next few trips is 300k.',
+  },
+  { id: 'c21', role: 'assistant', content: 'I recommend topping up 200k.' },
+  { id: 'c22', role: 'driver', content: 'How many reward points do I have?' },
+  { id: 'c23', role: 'assistant', content: 'You currently have 1,250 points.' },
+  {
+    id: 'c24',
+    role: 'assistant',
+    content: 'You can redeem a coffee voucher or parking discount today.',
+  },
+  { id: 'c25', role: 'driver', content: 'How did I do this week?' },
+  { id: 'c26', role: 'assistant', content: 'This week you completed 12 trips.' },
+  { id: 'c27', role: 'assistant', content: 'You saved 120k using smart routes.' },
+  {
+    id: 'c28',
+    role: 'assistant',
+    content: 'You also reduced travel time by 45 minutes.',
+  },
+  { id: 'c29', role: 'assistant', content: 'Great job!' },
+  { id: 'c30', role: 'driver', content: 'Nice.' },
+  { id: 'c31', role: 'assistant', content: 'Navigation is active. Have a safe trip!' },
+]
+
 function formatCurrency(value) {
   return `${value}k`
+}
+
+function pickVoice(voices, gender) {
+  const englishVoices = voices.filter((voice) => voice.lang?.toLowerCase().startsWith('en'))
+  const searchableVoices = englishVoices.length ? englishVoices : voices
+  const hints =
+    gender === 'male'
+      ? ['male', 'david', 'alex', 'daniel', 'fred', 'thomas', 'ryan', 'andrew', 'guy']
+      : ['female', 'zira', 'samantha', 'victoria', 'karen', 'ava', 'emma', 'aria', 'jenny']
+
+  return (
+    searchableVoices.find((voice) =>
+      hints.some((hint) => `${voice.name} ${voice.voiceURI}`.toLowerCase().includes(hint)),
+    ) ??
+    searchableVoices[0] ??
+    null
+  )
 }
 
 function Icon({ name }) {
@@ -248,6 +356,25 @@ function Icon({ name }) {
           <path {...commonProps} d="M12 7v5l3 2" />
         </svg>
       )
+    case 'volume':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path {...commonProps} d="M5 14h3l4 4V6L8 10H5z" />
+          <path {...commonProps} d="M16 9a5 5 0 0 1 0 6M18.5 6.5a8.5 8.5 0 0 1 0 11" />
+        </svg>
+      )
+    case 'record':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="7" fill="currentColor" stroke="none" />
+        </svg>
+      )
+    case 'stop':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="7" y="7" width="10" height="10" rx="1.5" fill="currentColor" stroke="none" />
+        </svg>
+      )
     default:
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -318,10 +445,20 @@ function App() {
   const [activeTab, setActiveTab] = useState('home')
   const [selectedRouteId, setSelectedRouteId] = useState('balance')
   const [walletBalance, setWalletBalance] = useState(120)
-  const [rewardPoints, setRewardPoints] = useState(1240)
+  const [rewardPoints, setRewardPoints] = useState(1250)
   const [tripCompleted, setTripCompleted] = useState(false)
   const [messages, setMessages] = useState(initialMessages)
   const [draftMessage, setDraftMessage] = useState('')
+  const [voiceState, setVoiceState] = useState('idle')
+  const [speakingMessageId, setSpeakingMessageId] = useState(null)
+  const [isFullConversationPlaying, setIsFullConversationPlaying] = useState(false)
+  const [availableVoices, setAvailableVoices] = useState([])
+  const [voiceError, setVoiceError] = useState('')
+  const speechUtteranceRef = useRef(null)
+  const recognitionRef = useRef(null)
+  const finalTranscriptRef = useRef('')
+  const fullPlaybackSeqRef = useRef(0)
+  const fullPlaybackActiveRef = useRef(false)
 
   const weeklySpend = 300
   const selectedRoute = useMemo(
@@ -329,6 +466,232 @@ function App() {
     [selectedRouteId],
   )
   const recommendedTopUp = Math.max(200, weeklySpend - walletBalance)
+  const hasSpeechSupport =
+    typeof window !== 'undefined' &&
+    'speechSynthesis' in window &&
+    'SpeechSynthesisUtterance' in window
+  const hasRecognitionSupport =
+    typeof window !== 'undefined' &&
+    ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)
+  const maleVoice = useMemo(() => pickVoice(availableVoices, 'male'), [availableVoices])
+  const femaleVoice = useMemo(() => pickVoice(availableVoices, 'female'), [availableVoices])
+
+  function cancelQueuedConversationPlayback() {
+    fullPlaybackSeqRef.current += 1
+    fullPlaybackActiveRef.current = false
+    setIsFullConversationPlaying(false)
+  }
+
+  function stopFullConversationPlayback() {
+    cancelQueuedConversationPlayback()
+    stopSpeechPlayback()
+  }
+
+  function playFullConversationThread() {
+    if (!hasSpeechSupport) {
+      setVoiceError('This browser does not support spoken playback.')
+      return
+    }
+
+    if (fullPlaybackActiveRef.current) {
+      stopFullConversationPlayback()
+      return
+    }
+
+    stopRecognition()
+    stopSpeechPlayback()
+    setVoiceError('')
+
+    const seq = ++fullPlaybackSeqRef.current
+    fullPlaybackActiveRef.current = true
+    setIsFullConversationPlaying(true)
+
+    function playAt(index) {
+      if (seq !== fullPlaybackSeqRef.current) {
+        return
+      }
+
+      if (index >= scriptedConversation.length) {
+        fullPlaybackActiveRef.current = false
+        setIsFullConversationPlaying(false)
+        setSpeakingMessageId(null)
+        return
+      }
+
+      const entry = scriptedConversation[index]
+      speakText(
+        entry.content,
+        entry.role === 'driver' ? 'male' : 'female',
+        () => {
+          if (seq !== fullPlaybackSeqRef.current) {
+            return
+          }
+          window.setTimeout(() => playAt(index + 1), 80)
+        },
+        { messageId: entry.id },
+      )
+    }
+
+    playAt(0)
+  }
+
+  function stopSpeechPlayback() {
+    if (!hasSpeechSupport) {
+      return
+    }
+
+    window.speechSynthesis.cancel()
+    speechUtteranceRef.current = null
+    setSpeakingMessageId(null)
+  }
+
+  function stopRecognition() {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop()
+    }
+  }
+
+  function speakText(text, preferredVoice, onDone, options = {}) {
+    if (!hasSpeechSupport) {
+      onDone?.()
+      return
+    }
+
+    stopSpeechPlayback()
+    setSpeakingMessageId(options.messageId ?? null)
+
+    const utterance = new window.SpeechSynthesisUtterance(text)
+    const voice = preferredVoice === 'male' ? maleVoice : femaleVoice
+    if (voice) {
+      utterance.voice = voice
+      utterance.lang = voice.lang
+    } else {
+      utterance.lang = 'en-US'
+    }
+    utterance.rate = preferredVoice === 'male' ? 0.98 : 1
+    utterance.pitch = preferredVoice === 'male' ? 0.88 : 1.14
+    utterance.volume = 1
+    utterance.onend = () => {
+      speechUtteranceRef.current = null
+      setSpeakingMessageId(null)
+      onDone?.()
+    }
+    utterance.onerror = () => {
+      speechUtteranceRef.current = null
+      setSpeakingMessageId(null)
+      setVoiceState('paused')
+      setVoiceError('Speech playback could not start on this device.')
+    }
+
+    speechUtteranceRef.current = utterance
+    window.speechSynthesis.speak(utterance)
+  }
+
+  function deliverAiResponse(prompt) {
+    cancelQueuedConversationPlayback()
+    const aiResponse = handleAsk(prompt)
+    if (!aiResponse) {
+      setVoiceState('idle')
+      return
+    }
+    setVoiceState('playing')
+    speakText(aiResponse, 'female', () => {
+      setVoiceState('idle')
+    })
+  }
+
+  function handleConversationPlayback(entry) {
+    if (!hasSpeechSupport) {
+      setVoiceError('This browser does not support spoken playback.')
+      return
+    }
+
+    if (speakingMessageId === entry.id) {
+      if (fullPlaybackActiveRef.current) {
+        stopFullConversationPlayback()
+      } else {
+        stopSpeechPlayback()
+      }
+      return
+    }
+
+    cancelQueuedConversationPlayback()
+    setVoiceError('')
+    speakText(
+      entry.content,
+      entry.role === 'driver' ? 'male' : 'female',
+      undefined,
+      { messageId: entry.id },
+    )
+  }
+
+  function startLiveRecognition() {
+    if (!hasRecognitionSupport) {
+      setVoiceError('Speech recognition is not available in this browser. Type in the chat instead.')
+      setVoiceState('idle')
+      return
+    }
+
+    const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition
+
+    if (!recognitionRef.current) {
+      const recognition = new SpeechRecognitionCtor()
+      recognition.lang = 'en-US'
+      recognition.interimResults = true
+      recognition.maxAlternatives = 1
+      recognition.continuous = false
+
+      recognition.onstart = () => {
+        setVoiceState('listening')
+      }
+
+      recognition.onresult = (event) => {
+        let transcript = ''
+
+        for (let index = event.resultIndex; index < event.results.length; index += 1) {
+          transcript += event.results[index][0].transcript
+        }
+
+        setVoiceState('transcribing')
+        finalTranscriptRef.current = transcript.trim()
+
+        const lastResult = event.results[event.results.length - 1]
+        if (lastResult?.isFinal) {
+          finalTranscriptRef.current = transcript.trim()
+        }
+      }
+
+      recognition.onerror = (event) => {
+        setVoiceError(
+          event.error === 'not-allowed'
+            ? 'Microphone access was blocked. Allow the mic or type in the chat.'
+            : 'Speech recognition is unavailable right now.',
+        )
+        setVoiceState('paused')
+      }
+
+      recognition.onend = () => {
+        const finalTranscript = finalTranscriptRef.current.trim()
+
+        if (finalTranscript) {
+          setVoiceState('answering')
+          deliverAiResponse(finalTranscript)
+          finalTranscriptRef.current = ''
+          return
+        }
+
+        setVoiceState('idle')
+      }
+
+      recognitionRef.current = recognition
+    }
+
+    cancelQueuedConversationPlayback()
+    stopSpeechPlayback()
+    setVoiceError('')
+    finalTranscriptRef.current = ''
+    recognitionRef.current.start()
+  }
 
   function handleAsk(prompt) {
     const normalized = prompt.trim()
@@ -336,6 +699,9 @@ function App() {
     if (!normalized) {
       return
     }
+
+    cancelQueuedConversationPlayback()
+    stopSpeechPlayback()
 
     const response =
       promptResponses[normalized] ??
@@ -347,6 +713,7 @@ function App() {
       { role: 'assistant', content: response },
     ])
     setDraftMessage('')
+    return response
   }
 
   function handleTopUp() {
@@ -364,6 +731,48 @@ function App() {
     setActiveTab('profile')
   }
 
+  useEffect(() => {
+    if (!hasSpeechSupport) {
+      return undefined
+    }
+
+    const loadVoices = () => {
+      setAvailableVoices(window.speechSynthesis.getVoices())
+    }
+
+    loadVoices()
+    window.speechSynthesis.addEventListener('voiceschanged', loadVoices)
+
+    return () => {
+      window.speechSynthesis.removeEventListener('voiceschanged', loadVoices)
+    }
+  }, [hasSpeechSupport])
+
+  useEffect(() => {
+    return () => {
+      if (hasSpeechSupport) {
+        window.speechSynthesis.cancel()
+        speechUtteranceRef.current = null
+      }
+      if (recognitionRef.current) {
+        recognitionRef.current.stop()
+      }
+    }
+  }, [hasSpeechSupport])
+
+  useEffect(() => {
+    if (!speakingMessageId) {
+      return
+    }
+
+    window.requestAnimationFrame(() => {
+      document.getElementById(`conv-msg-${speakingMessageId}`)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+      })
+    })
+  }, [speakingMessageId])
+
   return (
     <div className="vetc-page">
       <div className="phone-shell">
@@ -376,31 +785,33 @@ function App() {
           </div>
         </div>
 
-        <section className="hero-banner">
-          <div className="hero-top">
-            <button className="circle-button" type="button" aria-label="Menu">
-              <Icon name="menu" />
-            </button>
-            <button className="circle-button notification-button" type="button" aria-label="Notifications">
-              <Icon name="bell" />
-              <span />
-            </button>
-          </div>
+        {activeTab === 'home' ? (
+          <section className="hero-banner">
+            <div className="hero-top">
+              <button className="circle-button" type="button" aria-label="Menu">
+                <Icon name="menu" />
+              </button>
+              <button className="circle-button notification-button" type="button" aria-label="Notifications">
+                <Icon name="bell" />
+                <span />
+              </button>
+            </div>
 
-          <div className="hero-copy">
-            <p className="brand-line">DriveMate AI x VETC</p>
-            <h1>Smarter trips inside VETC</h1>
-            <p>
-              AI mobility companion inside the VETC experience with route intelligence, smart wallet, and trip
-              insights.
-            </p>
-          </div>
+            <div className="hero-copy">
+              <p className="brand-line">DriveMate AI x VETC</p>
+              <h1>Smarter trips inside VETC</h1>
+              <p>
+                AI mobility companion inside the VETC experience with route intelligence, smart wallet, and trip
+                insights.
+              </p>
+            </div>
 
-          <div className="hero-chip">1900 6010</div>
-          <div className="hero-car" aria-hidden="true" />
-        </section>
+            <div className="hero-chip">1900 6010</div>
+            <div className="hero-car" aria-hidden="true" />
+          </section>
+        ) : null}
 
-        <main className="mobile-content">
+        <main className={activeTab === 'home' ? 'mobile-content' : 'mobile-content compact-top'}>
           {activeTab === 'home' ? (
             <>
               <section className="service-card surface-card lifted">
@@ -566,7 +977,16 @@ function App() {
                     <p className="section-label green">DriveMate AI</p>
                     <h2>Assistant for VETC drivers</h2>
                   </div>
-                  <button type="button" className="mic-button">
+                  <button
+                    type="button"
+                    className={voiceState === 'listening' || voiceState === 'transcribing' ? 'mic-button active' : 'mic-button'}
+                    onClick={() =>
+                      voiceState === 'listening' || voiceState === 'transcribing'
+                        ? stopRecognition()
+                        : startLiveRecognition()
+                    }
+                    aria-label="Start live speech to text"
+                  >
                     <Icon name="sparkles" />
                   </button>
                 </div>
@@ -593,6 +1013,58 @@ function App() {
                     </button>
                   ))}
                 </div>
+
+                {voiceError ? <p className="voice-error assistant-voice-error">{voiceError}</p> : null}
+
+                <section className="conversation-section">
+                  <div className="conversation-header">
+                    <div>
+                      <span className="section-label">Assistant chat</span>
+                      <strong>Route and wallet updates</strong>
+                    </div>
+                    <button
+                      type="button"
+                      className={isFullConversationPlaying ? 'record-thread-btn playing' : 'record-thread-btn'}
+                      onClick={playFullConversationThread}
+                      aria-label={
+                        isFullConversationPlaying ? 'Stop playing conversation' : 'Play full conversation aloud'
+                      }
+                    >
+                      {isFullConversationPlaying ? <Icon name="stop" /> : <Icon name="record" />}
+                    </button>
+                  </div>
+
+                  <div className="conversation-thread">
+                    {scriptedConversation.map((entry) => (
+                      <article
+                        id={`conv-msg-${entry.id}`}
+                        key={entry.id}
+                        className={entry.role === 'assistant' ? 'message-row assistant' : 'message-row driver'}
+                      >
+                        <div className="message-meta">
+                          <span className={entry.role === 'assistant' ? 'message-avatar assistant' : 'message-avatar driver'}>
+                            {entry.role === 'assistant' ? 'AI' : 'DR'}
+                          </span>
+                          <span className="message-name">
+                            {entry.role === 'assistant' ? 'DriveMate AI' : 'Driver'}
+                          </span>
+                        </div>
+
+                        <div className={entry.role === 'assistant' ? 'message-bubble assistant' : 'message-bubble driver'}>
+                          <p>{entry.content}</p>
+                          <button
+                            type="button"
+                            className={speakingMessageId === entry.id ? 'message-audio active' : 'message-audio'}
+                            onClick={() => handleConversationPlayback(entry)}
+                          >
+                            <Icon name="volume" />
+                            <span>{speakingMessageId === entry.id ? 'Stop' : 'Play'}</span>
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </section>
 
                 <div className="chat-list">
                   {messages.map((message, index) => (
@@ -631,6 +1103,7 @@ function App() {
                   <li>Predict destination from routine and recent trips.</li>
                   <li>Compare route cost, time, and toll on a map view.</li>
                   <li>Recommend top-up amount and fuel-saving timing.</li>
+                  <li>Play real browser text-to-speech when the device/browser supports it.</li>
                   <li>Support rescue and vehicle reminders as part of VETC services.</li>
                 </ul>
               </section>
