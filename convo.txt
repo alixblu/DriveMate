@@ -1,12 +1,22 @@
+# DriveMate voice demo — EV vs ICE
+# Driver has two vehicles in the app (Profile → Garage): VinFast VF 8 (EV) and Volvo XC60 (diesel).
+# The AI asks which car is in use so running-cost talk stays in kWh/charging vs fuel litres.
+
 Driver: Hi, I’m about to head to the People’s Committee office. What’s the best route today?
+
+AI: Quick check—which car are you taking today? Your electric VinFast VF 8, or your Volvo XC60?
+
+Driver: The VinFast VF 8—I’m going electric today.
+
+AI: Got it. I’ll tune tips for battery use and charging—not petrol—unless you switch vehicles in the app.
 
 AI: I found 3 options:
 
 Best Value Route — 35 mins, 2 toll stations, Toll 30k each.
 
-AI: I recommend Best Value because it saves 20k with only 4 extra minutes.
+AI: I recommend Best Value because it saves about 20k in running cost with only a few extra minutes.
 
-AI: There are also 2 other options: Fastest Route and Cheapest Route, if you’d like to hear them.
+AI: There are also Fastest and Cheapest lanes if you want to hear them—energy use looks a bit different on each.
 
 Driver: Just start the best route.
 
@@ -20,17 +30,17 @@ AI: Sure. I’ll remind you when you’re near the coffee shop.
 
 Driver: Any traffic I should know about?
 
-AI: Yes. Heavy congestion is building on your usual highway route.
+AI: Forecast for your inbound leg: the highway stretch is expected to jam from about 7:50 to 8:30 AM—going through the middle often adds around 15 minutes.
 
-AI: Leaving before 8:10 AM can save around 12 minutes.
+AI: Try to leave before about 8:10 AM to miss the worst queue—you can usually save roughly 12 minutes compared with leaving mid-peak.
 
-Driver: How about fuel prices today?
+Driver: What should I expect for energy cost on the VF 8 for this commute?
 
-AI: Fuel increased by 500 VND/L today.
+AI: Blended home and DC fast pricing is up about 120 VND per kilowatt-hour versus your average last month.
 
-AI: Based on your weekly driving pattern, your cost may rise by about 80k this week.
+AI: For this office run you are looking at roughly 42 to 48k in electricity—usually a bit less than diesel in the Volvo for the same distance lately.
 
-AI: Choosing the fuel-efficient route can reduce that impact.
+AI: The Best Value lane avoids the longest high-speed pulls in this heat, which trims a few percent off kWh per kilometer.
 
 Driver: Do I need to top up my wallet?
 

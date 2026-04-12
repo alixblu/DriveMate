@@ -3,10 +3,27 @@ import './App.css'
 
 const user = {
   name: 'Alex Nguyen',
-  carType: 'VinFast VF 8',
   homeLocation: 'Thu Duc City',
   workLocation: 'District 1',
 }
+
+/** Garage — VF 8 is BEV; Volvo is ICE for mixed-household demo copy. */
+const vehicles = [
+  {
+    id: 'vinfast-vf8',
+    name: 'VinFast VF 8',
+    shortName: 'VF 8',
+    powertrain: 'ev',
+    detail: '82% charge · ~22 kWh/100 km blended',
+  },
+  {
+    id: 'volvo-xc60',
+    name: 'Volvo XC60',
+    shortName: 'XC60',
+    powertrain: 'ice',
+    detail: 'Diesel · ~6.8 L/100 km highway',
+  },
+]
 
 const commute = {
   destination: 'Office',
@@ -15,47 +32,65 @@ const commute = {
   departureTime: '08:10',
   toll: 35,
   fuel: 40,
-  traffic: 'Moderate',
+  traffic: 'Peak jam ~7:50–8:30',
 }
 
+/** AI suggested lane first (list + map draw order). aiFit = higher better; jamRisk = higher worse (Best Value carries more highway / toll stress). */
 const routes = [
+  {
+    id: 'balance',
+    label: 'AI suggested',
+    tag: 'Best Value',
+    eta: 35,
+    toll: 60,
+    tollStations: 2,
+    tollEach: 30,
+    fuel: 38,
+    aiFit: 91,
+    jamRisk: 46,
+    color: '#18b46b',
+    path: 'M40 178 C84 166 124 138 150 128 C176 116 218 102 278 54',
+    summary: 'Best trade-off between time, toll, and running cost today.',
+    coffeeStop: 'Highlands Coffee',
+  },
   {
     id: 'fast',
     label: 'Fast lane',
     tag: 'Fastest',
-    eta: 20,
+    eta: 19,
     toll: 50,
-    fuel: 45,
-    score: 76,
+    tollStations: 1,
+    tollEach: 50,
+    fuel: 47,
+    aiFit: 68,
+    jamRisk: 18,
     color: '#1f2937',
     path: 'M36 176 C80 160 112 132 142 118 C174 103 218 98 280 50',
     summary: 'Best when arrival time matters most.',
+    coffeeStop: null,
   },
   {
     id: 'cheap',
     label: 'Saver lane',
     tag: 'Cheapest',
-    eta: 28,
-    toll: 20,
-    fuel: 35,
-    score: 72,
+    eta: 30,
+    toll: 18,
+    tollStations: 1,
+    tollEach: 18,
+    fuel: 34,
+    aiFit: 65,
+    jamRisk: 31,
     color: '#f59e0b',
     path: 'M38 178 C86 182 108 154 138 150 C170 146 226 126 276 58',
-    summary: 'Lower toll and fuel, slightly longer city route.',
-  },
-  {
-    id: 'balance',
-    label: 'AI suggested',
-    tag: 'Best Value',
-    eta: 24,
-    toll: 35,
-    fuel: 40,
-    score: 88,
-    color: '#18b46b',
-    path: 'M40 178 C84 166 124 138 150 128 C176 116 218 102 278 54',
-    summary: 'Best trade-off between time, toll, and fuel today.',
+    summary: 'Lower toll and running cost, slightly longer city route.',
+    coffeeStop: null,
   },
 ]
+
+const routeCoffeeStop = {
+  name: 'Highlands Coffee',
+  detail: 'On the AI suggested lane — we can remind you when you are nearby.',
+}
 
 const services = [
   { id: 'wallet', label: 'Top up', icon: 'wallet', tab: 'wallet' },
@@ -70,20 +105,22 @@ const services = [
 
 const quickPrompts = [
   'Cheapest route today?',
-  'How long to office?',
+  'VF 8 energy cost today?',
   'Need top-up for this week?',
   'Any traffic ahead?',
 ]
 
 const promptResponses = {
   'Cheapest route today?':
-    'The cheapest route is the city bypass: 20k toll, 35k fuel, about 28 minutes. If you still want good balance, I recommend the AI route instead.',
+    'The cheapest lane is about 18k toll and 34k in running cost, near 30 minutes. Your AI lane balances time and kWh a bit better in heat like today.',
+  'VF 8 energy cost today?':
+    'Blended charging is up roughly 120 VND per kWh. For your office run in the VF 8, budget about 42 to 48k in electricity—usually under what the Volvo costs in diesel for the same trip.',
   'How long to office?':
-    'Office is 24 minutes away via the AI route right now. If you leave after 8:20, ETA increases by around 9 minutes.',
+    'Office is about 24 to 35 minutes depending on lane. If you leave after 8:20, ETA often increases by around 9 minutes.',
   'Need top-up for this week?':
     'Yes. Your expected toll spend is 300k and your wallet is only 120k. I suggest a 200k top-up to stay safe.',
   'Any traffic ahead?':
-    'Traffic is building near Cat Lai and the expressway merge. The AI route avoids the worst slowdown and keeps toll spend moderate.',
+    'Typical inbound peak on your corridor is about 7:50 to 8:30 AM—often around 15 extra minutes if you drive through the thick of it. Leaving before about 8:10 usually saves roughly 12 minutes.',
   'Show my rewards':
     'You currently have 1,250 reward points. One more recommended commute unlocks the next toll discount reward.',
 }
@@ -104,8 +141,8 @@ const articleCards = [
   {
     id: 3,
     theme: 'teal',
-    title: 'Fuel price is up 500 VND. Choose the balanced route today',
-    kicker: 'Fuel Insight',
+    title: 'EV rates edged up—balanced route saves a few percent on kWh in the heat',
+    kicker: 'Energy insight',
   },
   {
     id: 4,
@@ -119,7 +156,7 @@ const weeklyMetrics = [
   { label: 'Trips', value: '14' },
   { label: 'Saved', value: '185k' },
   { label: 'Traffic cut', value: '45m' },
-  { label: 'Preferred route', value: 'Fast 70%' },
+  { label: 'Preferred car', value: 'VF 8' },
 ]
 
 const bottomTabs = [
@@ -139,8 +176,8 @@ const chatHistorySessions = [
   },
   {
     id: 'h2',
-    title: 'Fuel & weekly cost',
-    preview: '500 VND/L change, smart route savings…',
+    title: 'VF 8 energy & weekly cost',
+    preview: 'kWh pricing, Volvo comparison, smart route savings…',
     when: 'Yesterday',
   },
   {
@@ -152,7 +189,7 @@ const chatHistorySessions = [
   {
     id: 'h4',
     title: 'Traffic & departure',
-    preview: 'Highway congestion, leave before 8:10…',
+    preview: 'Jam forecast 7:50–8:30, leave before 8:10…',
     when: 'Last week',
   },
 ]
@@ -164,93 +201,123 @@ const scriptedConversation = [
     content:
       "Hi, I'm about to head to the People's Committee office. What's the best route today?",
   },
-  { id: 'c2', role: 'assistant', content: 'I found 3 options:' },
+  {
+    id: 'c2',
+    role: 'assistant',
+    content:
+      'Quick check—which car are you taking today? Your electric VinFast VF 8, or your Volvo XC60?',
+  },
   {
     id: 'c3',
-    role: 'assistant',
-    content: 'Best Value Route — 35 mins, 2 toll stations, Toll 30k each.',
+    role: 'driver',
+    content: "The VinFast VF 8—I'm going electric today.",
   },
   {
     id: 'c4',
     role: 'assistant',
-    content: 'I recommend Best Value because it saves 20k with only 4 extra minutes.',
+    content:
+      "Got it. I'll tune tips for battery use and charging—not petrol—unless you switch vehicles in the app.",
+  },
+  { id: 'c5', role: 'assistant', content: 'I found 3 options:' },
+  {
+    id: 'c6',
+    role: 'assistant',
+    content: 'Best Value Route — 35 mins, 2 toll stations, Toll 30k each.',
   },
   {
-    id: 'c5',
+    id: 'c7',
     role: 'assistant',
-    content:
-      "There are also 2 other options: Fastest Route and Cheapest Route, if you'd like to hear them.",
+    content: 'I recommend Best Value because it saves about 20k in running cost with only a few extra minutes.',
   },
-  { id: 'c6', role: 'driver', content: 'Just start the best route.' },
-  { id: 'c7', role: 'assistant', content: 'Starting Best Value Route now.' },
   {
     id: 'c8',
     role: 'assistant',
     content:
+      "There are also Fastest and Cheapest lanes if you want to hear them—energy use looks a bit different on each.",
+  },
+  { id: 'c9', role: 'driver', content: 'Just start the best route.' },
+  { id: 'c10', role: 'assistant', content: 'Starting Best Value Route now.' },
+  {
+    id: 'c11',
+    role: 'assistant',
+    content:
       "There is a Highlands Coffee on the way. Would you like to grab one as usual? I can remind you when you're nearby.",
   },
-  { id: 'c9', role: 'driver', content: "Yes, remind me when I'm close." },
-  {
-    id: 'c10',
-    role: 'assistant',
-    content: "Sure. I'll remind you when you're near the coffee shop.",
-  },
-  { id: 'c11', role: 'driver', content: 'Any traffic I should know about?' },
-  {
-    id: 'c12',
-    role: 'assistant',
-    content: 'Yes. Heavy congestion is building on your usual highway route.',
-  },
+  { id: 'c12', role: 'driver', content: "Yes, remind me when I'm close." },
   {
     id: 'c13',
     role: 'assistant',
-    content: 'Leaving before 8:10 AM can save around 12 minutes.',
+    content: "Sure. I'll remind you when you're near the coffee shop.",
   },
-  { id: 'c14', role: 'driver', content: 'How about fuel prices today?' },
-  { id: 'c15', role: 'assistant', content: 'Fuel increased by 500 VND/L today.' },
+  { id: 'c14', role: 'driver', content: 'Any traffic I should know about?' },
+  {
+    id: 'c15',
+    role: 'assistant',
+    content:
+      'Forecast for your inbound leg: the highway stretch is expected to jam from about 7:50 to 8:30 AM—going through the middle often adds around 15 minutes.',
+  },
   {
     id: 'c16',
     role: 'assistant',
-    content: 'Based on your weekly driving pattern, your cost may rise by about 80k this week.',
+    content:
+      'Try to leave before about 8:10 AM to miss the worst queue—you can usually save roughly 12 minutes compared with leaving mid-peak.',
   },
   {
     id: 'c17',
-    role: 'assistant',
-    content: 'Choosing the fuel-efficient route can reduce that impact.',
+    role: 'driver',
+    content: 'What should I expect for energy cost on the VF 8 for this commute?',
   },
-  { id: 'c18', role: 'driver', content: 'Do I need to top up my wallet?' },
-  { id: 'c19', role: 'assistant', content: 'Your wallet balance is 120k.' },
+  {
+    id: 'c18',
+    role: 'assistant',
+    content:
+      'Blended home and DC fast pricing is up about 120 VND per kilowatt-hour versus your average last month.',
+  },
+  {
+    id: 'c19',
+    role: 'assistant',
+    content:
+      'For this office run you are looking at roughly 42 to 48k in electricity—usually a bit less than diesel in the Volvo for the same distance lately.',
+  },
   {
     id: 'c20',
     role: 'assistant',
+    content:
+      'The Best Value lane avoids the longest high-speed pulls in this heat, which trims a few percent off kWh per kilometer.',
+  },
+  { id: 'c21', role: 'driver', content: 'Do I need to top up my wallet?' },
+  { id: 'c22', role: 'assistant', content: 'Your wallet balance is 120k.' },
+  {
+    id: 'c23',
+    role: 'assistant',
     content: 'Estimated toll spending for the next few trips is 300k.',
   },
-  { id: 'c21', role: 'assistant', content: 'I recommend topping up 200k.' },
-  { id: 'c22', role: 'driver', content: 'How many reward points do I have?' },
-  { id: 'c23', role: 'assistant', content: 'You currently have 1,250 points.' },
+  { id: 'c24', role: 'assistant', content: 'I recommend topping up 200k.' },
+  { id: 'c25', role: 'driver', content: 'How many reward points do I have?' },
+  { id: 'c26', role: 'assistant', content: 'You currently have 1,250 points.' },
   {
-    id: 'c24',
+    id: 'c27',
     role: 'assistant',
     content: 'You can redeem a coffee voucher or parking discount today.',
   },
-  { id: 'c25', role: 'driver', content: 'How did I do this week?' },
-  { id: 'c26', role: 'assistant', content: 'This week you completed 12 trips.' },
-  { id: 'c27', role: 'assistant', content: 'You saved 120k using smart routes.' },
+  { id: 'c28', role: 'driver', content: 'How did I do this week?' },
+  { id: 'c29', role: 'assistant', content: 'This week you completed 12 trips.' },
+  { id: 'c30', role: 'assistant', content: 'You saved 120k using smart routes.' },
   {
-    id: 'c28',
+    id: 'c31',
     role: 'assistant',
     content: 'You also reduced travel time by 45 minutes.',
   },
-  { id: 'c29', role: 'assistant', content: 'Great job!' },
-  { id: 'c30', role: 'driver', content: 'Nice.' },
-  { id: 'c31', role: 'assistant', content: 'Navigation is active. Have a safe trip!' },
+  { id: 'c32', role: 'assistant', content: 'Great job!' },
+  { id: 'c33', role: 'driver', content: 'Nice.' },
+  { id: 'c34', role: 'assistant', content: 'Navigation is active. Have a safe trip!' },
 ]
 
 /** Trip context rows unlock when this script line index is reached (0-based, matches scriptedConversation). */
 const VOICE_CTX_DEST_MI = 0
-const VOICE_CTX_ROUTE_MI = 2
-const VOICE_CTX_BONUS_MI = 7
-const VOICE_CTX_NEXT_ACTION_MI = 12
+const VOICE_CTX_ROUTE_MI = 5
+const VOICE_CTX_BONUS_MI = 10
+const VOICE_CTX_NEXT_ACTION_MI = 15
 
 /** Scripted demo copy aligned with convo.txt / c3 line. */
 const voiceDemoTrip = {
@@ -371,6 +438,14 @@ function Icon({ name }) {
           <path {...commonProps} d="M7 11h8M17 7h2l2 2v8a2 2 0 0 1-4 0v-4" />
         </svg>
       )
+    case 'coffee':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path {...commonProps} d="M6 4h10a2 2 0 0 1 2 2v2a3 3 0 0 1-3 3h-1" />
+          <path {...commonProps} d="M6 8v10a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V8" />
+          <path {...commonProps} d="M18 9h1a2 2 0 0 1 0 4h-2" />
+        </svg>
+      )
     case 'grid':
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -459,12 +534,25 @@ function Icon({ name }) {
   }
 }
 
-function RouteMap({ selectedRoute }) {
+function RouteMap({
+  selectedRoute,
+  onSelectRoute,
+  runningCostLabel,
+  destinationLabel,
+  originLabel,
+  variant = 'default',
+}) {
+  const dest = destinationLabel ?? voiceDemoTrip.destination
+  const origin = originLabel ?? user.homeLocation
+  const isRoutesTab = variant === 'routes'
+
   return (
-    <div className="map-vision">
+    <div className={`map-vision${isRoutesTab ? ' map-vision-routes' : ''}`}>
       <div className="map-vision-top">
-        <span className="map-live">Live map vision</span>
-        <span className="map-area">Thu Duc to District 1</span>
+        <span className="map-live">{isRoutesTab ? '3 routes' : 'Live map'}</span>
+        <span className="map-area">
+          {origin} → {dest}
+        </span>
       </div>
       <svg className="map-canvas" viewBox="0 0 320 220" aria-hidden="true">
         <rect x="0" y="0" width="320" height="220" rx="28" fill="#eef4ef" />
@@ -474,43 +562,106 @@ function RouteMap({ selectedRoute }) {
         <path d="M72 40C98 84 108 124 96 192" stroke="#dce8dd" strokeWidth="14" fill="none" />
         <path d="M214 20C208 68 222 126 258 198" stroke="#dfe7f0" strokeWidth="12" fill="none" />
 
-        {routes.map((route) => (
-          <path
-            key={route.id}
-            d={route.path}
-            stroke={route.color}
-            strokeWidth={route.id === selectedRoute.id ? '10' : '6'}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            fill="none"
-            opacity={route.id === selectedRoute.id ? '1' : '0.35'}
-          />
-        ))}
+        {routes
+          .slice()
+          .sort((a, b) => {
+            if (a.id === selectedRoute.id) return 1
+            if (b.id === selectedRoute.id) return -1
+            return 0
+          })
+          .map((route) => {
+            const active = route.id === selectedRoute.id
+            return (
+              <path
+                key={route.id}
+                d={route.path}
+                stroke={route.color}
+                strokeWidth={active ? '10' : '6'}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+                opacity={active ? '1' : '0.52'}
+              />
+            )
+          })}
 
         <circle cx="38" cy="178" r="10" fill="#18b46b" />
         <circle cx="278" cy="54" r="10" fill="#111827" />
         <circle cx="38" cy="178" r="18" fill="rgba(24,180,107,0.18)" />
         <circle cx="278" cy="54" r="18" fill="rgba(17,24,39,0.12)" />
-        <text x="26" y="205" fill="#4b5563" fontSize="12" fontWeight="700">
-          Home
+        <text x="26" y="205" fill="#4b5563" fontSize="11" fontWeight="700">
+          Start
         </text>
-        <text x="248" y="34" fill="#111827" fontSize="12" fontWeight="700">
-          Office
+        <text x="210" y="34" fill="#111827" fontSize="10" fontWeight="700">
+          Committee
         </text>
       </svg>
-      <div className="map-insights">
-        <div>
-          <span>Current pick</span>
-          <strong>{selectedRoute.tag}</strong>
+
+      {isRoutesTab ? (
+        <div className="route-map-legend" role="radiogroup" aria-label="Select route to show on map">
+          {routes.map((route) => {
+            const active = route.id === selectedRoute.id
+            return (
+              <button
+                key={route.id}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                className={`route-map-legend-item${active ? ' active' : ''}`}
+                onClick={() => onSelectRoute?.(route.id)}
+              >
+                <i className="route-map-legend-swatch" style={{ background: route.color }} aria-hidden="true" />
+                {route.tag}
+              </button>
+            )
+          })}
         </div>
-        <div>
-          <span>Traffic</span>
-          <strong>{commute.traffic}</strong>
-        </div>
-        <div>
-          <span>Depart by</span>
-          <strong>{commute.departureTime}</strong>
-        </div>
+      ) : null}
+
+      <div className={`map-insights${isRoutesTab ? ' map-insights-routes' : ''}`}>
+        {isRoutesTab ? (
+          <>
+            <div>
+              <span>Heading to</span>
+              <strong>{dest}</strong>
+            </div>
+            <div>
+              <span>Toll stations</span>
+              <strong>
+                {selectedRoute.tollStations} {selectedRoute.tollStations === 1 ? 'station' : 'stations'}
+              </strong>
+            </div>
+            <div>
+              <span>Toll</span>
+              <strong>
+                {formatCurrency(selectedRoute.tollEach)} each · {formatCurrency(selectedRoute.toll)} total
+              </strong>
+            </div>
+            <div>
+              <span>ETA</span>
+              <strong>{selectedRoute.eta} mins</strong>
+            </div>
+            <div>
+              <span>{runningCostLabel ?? 'Running cost'}</span>
+              <strong>{formatCurrency(selectedRoute.fuel)}</strong>
+            </div>
+          </>
+        ) : (
+          <>
+            <div>
+              <span>Current pick</span>
+              <strong>{selectedRoute.tag}</strong>
+            </div>
+            <div>
+              <span>Traffic</span>
+              <strong>{commute.traffic}</strong>
+            </div>
+            <div>
+              <span>Depart by</span>
+              <strong>{commute.departureTime}</strong>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
@@ -518,6 +669,7 @@ function RouteMap({ selectedRoute }) {
 
 function App() {
   const [activeTab, setActiveTab] = useState('home')
+  const [activeVehicleId, setActiveVehicleId] = useState('vinfast-vf8')
   const [selectedRouteId, setSelectedRouteId] = useState('balance')
   const [walletBalance, setWalletBalance] = useState(120)
   const [rewardPoints, setRewardPoints] = useState(1250)
@@ -547,6 +699,11 @@ function App() {
     () => routes.find((route) => route.id === selectedRouteId) ?? routes[2],
     [selectedRouteId],
   )
+  const activeVehicle = useMemo(
+    () => vehicles.find((v) => v.id === activeVehicleId) ?? vehicles[0],
+    [activeVehicleId],
+  )
+  const runningCostLabel = activeVehicle.powertrain === 'ev' ? 'Energy est.' : 'Fuel est.'
   const recommendedTopUp = Math.max(200, weeklySpend - walletBalance)
   const hasSpeechSupport =
     typeof window !== 'undefined' &&
@@ -996,11 +1153,27 @@ function App() {
             </div>
 
             <div className="hero-chip">1900 6010</div>
-            <div className="hero-car" aria-hidden="true" />
+            <div className="hero-car-wrap" aria-hidden="true">
+              <div className={`hero-car ${activeVehicle.powertrain === 'ev' ? 'hero-car--ev' : 'hero-car--ice'}`} />
+              <div className="hero-car-label">
+                <span className="hero-car-name">{activeVehicle.shortName}</span>
+                <span className={`hero-car-power ${activeVehicle.powertrain === 'ev' ? 'is-ev' : ''}`}>
+                  {activeVehicle.powertrain === 'ev' ? 'Electric' : 'Petrol'}
+                </span>
+              </div>
+            </div>
           </section>
         ) : null}
 
-        <main className={activeTab === 'home' ? 'mobile-content' : 'mobile-content compact-top'}>
+        <main
+          className={[
+            'mobile-content',
+            activeTab !== 'home' ? 'compact-top' : '',
+            activeTab === 'routes' ? 'routes-tab-main' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >
           {activeTab === 'home' ? (
             <>
               <section className="service-card surface-card lifted">
@@ -1056,7 +1229,7 @@ function App() {
                     <strong>{formatCurrency(commute.toll)}</strong>
                   </div>
                   <div className="mini-metric">
-                    <span>Fuel</span>
+                    <span>{runningCostLabel.replace(' est.', '')}</span>
                     <strong>{formatCurrency(commute.fuel)}</strong>
                   </div>
                 </div>
@@ -1080,8 +1253,11 @@ function App() {
               <section className="smart-card surface-card">
                 <div className="smart-copy">
                   <p className="section-label green">Smart alert</p>
-                  <h2>Fuel up 500 VND today</h2>
-                  <p>Based on your weekly travel, choosing the AI route can reduce extra cost by around 80k.</p>
+                  <h2>VF 8: charging rates up slightly</h2>
+                  <p>
+                    Blended kWh is higher this week. The balanced lane trims highway drag—worth it when you are in the
+                    electric car; switch to the Volvo in Garage if you need diesel estimates.
+                  </p>
                 </div>
                 <button
                   type="button"
@@ -1114,55 +1290,52 @@ function App() {
 
           {activeTab === 'routes' ? (
             <>
-              <section className="page-header">
-                <div>
-                  <p className="section-label">AI route compare</p>
-                  <h2>Today&apos;s route map</h2>
+              <section className="page-header routes-page-header">
+                <div className="routes-page-header-main">
+                  <p className="section-label">Heading to</p>
+                  <h2>{voiceDemoTrip.destination}</h2>
+                  <p className="routes-page-sub">
+                    {user.homeLocation} · {routes.length} routes · tap a route under the map
+                  </p>
                 </div>
-                <button type="button" className="text-button" onClick={() => setActiveTab('home')}>
+                <button type="button" className="text-button routes-page-back" onClick={() => setActiveTab('home')}>
                   Back
                 </button>
               </section>
 
-              <section className="surface-card map-section">
-                <RouteMap selectedRoute={selectedRoute} />
+              <section className="surface-card map-section routes-map-section">
+                <RouteMap
+                  selectedRoute={selectedRoute}
+                  variant="routes"
+                  onSelectRoute={setSelectedRouteId}
+                  runningCostLabel={runningCostLabel}
+                />
               </section>
 
-              <section className="route-list">
-                {routes.map((route) => (
-                  <button
-                    key={route.id}
-                    type="button"
-                    className={route.id === selectedRouteId ? 'route-tile active' : 'route-tile'}
-                    onClick={() => setSelectedRouteId(route.id)}
-                  >
-                    <div className="route-tile-top">
-                      <div>
-                        <span className="route-kicker">{route.label}</span>
-                        <strong>{route.tag}</strong>
-                      </div>
-                      <span className="route-score">{route.score}</span>
-                    </div>
-                    <p>{route.summary}</p>
-                    <div className="route-stats">
-                      <span>{route.eta} mins</span>
-                      <span>{formatCurrency(route.toll)} toll</span>
-                      <span>{formatCurrency(route.fuel)} fuel</span>
-                    </div>
-                  </button>
-                ))}
-              </section>
-
-              <section className="bottom-cta surface-card">
+              <div className="routes-coffee-card surface-card">
+                <span className="routes-coffee-icon" aria-hidden="true">
+                  <Icon name="coffee" />
+                </span>
+                <div className="routes-coffee-copy">
+                  <p className="section-label">Along the way</p>
+                  <strong>{routeCoffeeStop.name}</strong>
+                  <p>{routeCoffeeStop.detail}</p>
+                </div>
+              </div>
+              <section className="bottom-cta bottom-cta-routes surface-card">
                 <div>
                   <p className="section-label green">Drive plan</p>
                   <h2>{selectedRoute.tag} selected</h2>
-                  <p>Wallet after toll: {formatCurrency(Math.max(0, walletBalance - selectedRoute.toll))}</p>
+                  <p>
+                    {activeVehicle.shortName} · Wallet after toll:{' '}
+                    {formatCurrency(Math.max(0, walletBalance - selectedRoute.toll))}
+                  </p>
                 </div>
-                <button type="button" className="primary-action" onClick={handleCompleteTrip}>
+                <button type="button" className="primary-action primary-action-compact" onClick={handleCompleteTrip}>
                   {tripCompleted ? 'Trip done' : 'Start trip'}
                 </button>
               </section>
+
             </>
           ) : null}
 
@@ -1274,9 +1447,39 @@ function App() {
                   <div>
                     <p className="section-label green">Driver profile</p>
                     <h2>{user.name}</h2>
-                    <p>{user.carType} • {user.homeLocation} to {user.workLocation}</p>
+                    <p>
+                      Active: {activeVehicle.name} • {user.homeLocation} to {user.workLocation}
+                    </p>
                   </div>
                 </div>
+
+                <section className="surface-card garage-card" aria-label="My cars">
+                  <div className="garage-card-head">
+                    <p className="section-label">Garage</p>
+                    <h2>My cars</h2>
+                    <p className="garage-card-sub">Choose today&apos;s vehicle for toll and {runningCostLabel.toLowerCase()} hints.</p>
+                  </div>
+                  <div className="garage-list">
+                    {vehicles.map((vehicle) => (
+                      <button
+                        key={vehicle.id}
+                        type="button"
+                        className={
+                          vehicle.id === activeVehicleId ? 'garage-tile active' : 'garage-tile'
+                        }
+                        onClick={() => setActiveVehicleId(vehicle.id)}
+                      >
+                        <span className={`garage-badge ${vehicle.powertrain === 'ev' ? 'garage-badge-ev' : ''}`}>
+                          {vehicle.powertrain === 'ev' ? 'EV' : 'ICE'}
+                        </span>
+                        <span className="garage-tile-main">
+                          <strong>{vehicle.name}</strong>
+                          <span>{vehicle.detail}</span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
 
                 <div className="weekly-grid">
                   {weeklyMetrics.map((metric) => (
@@ -1294,7 +1497,7 @@ function App() {
                 <ul className="feature-list">
                   <li>Morning commute prediction with confidence score.</li>
                   <li>Map-based route recommendation instead of plain route text.</li>
-                  <li>Wallet, fuel, reward, and rescue assistance in one assistant layer.</li>
+                  <li>Wallet, fuel or EV energy, rewards, and rescue in one assistant layer.</li>
                   <li>Weekly insight card for business value and retention story.</li>
                 </ul>
               </section>
@@ -1483,7 +1686,7 @@ function App() {
                       type="text"
                       value={draftMessage}
                       onChange={(event) => setDraftMessage(event.target.value)}
-                      placeholder="Ask about route, fuel, wallet, rewards..."
+                      placeholder="Ask about route, EV energy, wallet, rewards..."
                     />
                     <div className="composer-action-group">
                       <button
@@ -1509,7 +1712,7 @@ function App() {
           </div>
         ) : null}
 
-        {!voiceChatOpen ? (
+        {!voiceChatOpen && activeTab !== 'routes' ? (
           <button type="button" className="floating-support" onClick={openVoiceChat}>
             <span className="floating-ring">
               <Icon name="sparkles" />
