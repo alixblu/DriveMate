@@ -28,7 +28,7 @@ export const commute = {
   eta: 24,
   departureTime: '08:10',
   toll: 35,
-  fuel: 40,
+  charging: 40,
   traffic: 'Peak jam ~7:50–8:30',
 }
 
@@ -42,13 +42,14 @@ export const routes = [
     toll: 60,
     tollStations: 2,
     tollEach: 30,
-    fuel: 38,
+    charging: 38,
     aiFit: 91,
     jamRisk: 46,
     color: '#18b46b',
     path: 'M40 178 C84 166 124 138 150 128 C176 116 218 102 278 54',
     summary: 'Best trade-off between time, toll, and running cost today.',
     coffeeStop: 'Highlands Coffee',
+    parkingSpot: 'Nguyen Hue Smart Parking',
   },
   {
     id: 'fast',
@@ -58,13 +59,14 @@ export const routes = [
     toll: 50,
     tollStations: 1,
     tollEach: 50,
-    fuel: 47,
+    charging: 47,
     aiFit: 68,
     jamRisk: 18,
     color: '#1f2937',
     path: 'M36 176 C80 160 112 132 142 118 C174 103 218 98 280 50',
     summary: 'Best when arrival time matters most.',
     coffeeStop: null,
+    parkingSpot: 'District 1 Basement Parking',
   },
   {
     id: 'cheap',
@@ -74,19 +76,25 @@ export const routes = [
     toll: 18,
     tollStations: 1,
     tollEach: 18,
-    fuel: 34,
+    charging: 34,
     aiFit: 65,
     jamRisk: 31,
     color: '#f59e0b',
     path: 'M38 178 C86 182 108 154 138 150 C170 146 226 126 276 58',
     summary: 'Lower toll and running cost, slightly longer city route.',
     coffeeStop: null,
+    parkingSpot: 'Le Loi Public Parking',
   },
 ]
 
 export const routeCoffeeStop = {
   name: 'Highlands Coffee',
   detail: 'On the AI suggested lane — we can remind you when you are nearby.',
+}
+
+export const routeParkingSpot = {
+  name: 'Nguyen Hue Smart Parking',
+  detail: '6-minute walk to the office, 14 EV bays available, reserve from DriveMate AI.',
 }
 
 export const services = [
@@ -96,7 +104,7 @@ export const services = [
   { id: 'docs', label: 'Docs wallet', icon: 'document', tab: 'profile', badge: 'New' },
   { id: 'route', label: 'AI routes', icon: 'routes', badge: 'AI' },
   { id: 'rescue', label: 'AI rescue', icon: 'rescue', tab: 'assistant', badge: 'New' },
-  { id: 'fuel', label: 'Fuel coach', icon: 'fuel', tab: 'assistant' },
+  { id: 'charging', label: 'Charging coach', icon: 'fuel', tab: 'assistant' },
   { id: 'more', label: 'More', icon: 'grid', tab: 'profile' },
 ]
 
@@ -111,13 +119,15 @@ export const promptResponses = {
   'Cheapest route today?':
     'The cheapest lane is about 18k toll and 34k in running cost, near 30 minutes. Your AI lane balances time and kWh a bit better in heat like today.',
   'VF 8 energy cost today?':
-    'Blended charging is up roughly 120 VND per kWh. For your office run in the VF 8, budget about 42 to 48k in electricity—usually under what the Volvo costs in diesel for the same trip.',
+    'Blended charging is up roughly 120 VND per kWh. For your office run in the VF 8, budget about 42 to 48k in electricity depending on home and fast-charging share.',
   'How long to office?':
     'Office is about 24 to 35 minutes depending on lane. If you leave after 8:20, ETA often increases by around 9 minutes.',
   'Need top-up for this week?':
     'Yes. Your expected toll spend is 300k and your wallet is only 120k. I suggest a 200k top-up to stay safe.',
   'Any traffic ahead?':
     'Typical inbound peak on your corridor is about 7:50 to 8:30 AM—often around 15 extra minutes if you drive through the thick of it. Leaving before about 8:10 usually saves roughly 12 minutes.',
+  'Any parking near office?':
+    'Yes. Nguyen Hue Smart Parking has EV slots available this morning. It is around a 6-minute walk from your office and you can reserve a bay now.',
   'Show my rewards':
     'You currently have 1,250 reward points. One more recommended commute unlocks the next toll discount reward.',
 }
@@ -168,7 +178,7 @@ export const chatHistorySessions = [
   {
     id: 'h1',
     title: 'Office route & toll',
-    preview: 'Best Value Route, wallet balance, coffee reminder…',
+    preview: 'Best Value Route, charging stop, parking reservation…',
     when: 'Today · 8:02',
   },
   {
@@ -246,6 +256,13 @@ export const scriptedConversation = [
     role: 'assistant',
     content: "Sure. I'll remind you when you're near the coffee shop.",
   },
+  { id: 'c13b', role: 'assistant', content: 'Nearby parking: Nguyen Hue Smart Parking has EV slots now.' },
+  { id: 'c13c', role: 'driver', content: 'Please reserve one slot close to the office.' },
+  {
+    id: 'c13d',
+    role: 'assistant',
+    content: 'Done. One EV slot is reserved from 8:30 to 10:30 AM, about a 6-minute walk to your office.',
+  },
   { id: 'c14', role: 'driver', content: 'Any traffic I should know about?' },
   {
     id: 'c15',
@@ -274,7 +291,7 @@ export const scriptedConversation = [
     id: 'c19',
     role: 'assistant',
     content:
-      'For this office run you are looking at roughly 42 to 48k in electricity—usually a bit less than diesel in the Volvo for the same distance lately.',
+      'For this office run you are looking at roughly 42 to 48k in electricity based on your current charging mix.',
   },
   {
     id: 'c20',
@@ -315,5 +332,5 @@ export const voiceDemoTrip = {
   routeLabel: 'Best Value',
   etaMins: 35,
   tollSummary: '2 stations • 30k each',
-  bonusLine: 'Coffee reminder on the way',
+  bonusLine: 'Coffee + parking reminder on the way',
 }

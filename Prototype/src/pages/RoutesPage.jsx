@@ -1,7 +1,7 @@
 import React from 'react';
 import { Icon } from '../components/Icon';
 import { RouteMap } from '../components/RouteMap';
-import { voiceDemoTrip, user, routeCoffeeStop, routes } from '../data/mockData';
+import { voiceDemoTrip, user, routeCoffeeStop, routeParkingSpot, routes } from '../data/mockData';
 
 export function RoutesPage({
   selectedRoute,
@@ -46,6 +46,17 @@ export function RoutesPage({
           <p className="section-label">Along the way</p>
           <strong>{routeCoffeeStop.name}</strong>
           <p>{routeCoffeeStop.detail}</p>
+        </div>
+      </div>
+
+      <div className="routes-coffee-card routes-parking-card surface-card">
+        <span className="routes-coffee-icon" aria-hidden="true">
+          <Icon name="document" />
+        </span>
+        <div className="routes-coffee-copy">
+          <p className="section-label">Destination support</p>
+          <strong>{routeParkingSpot.name}</strong>
+          <p>{routeParkingSpot.detail}</p>
         </div>
       </div>
       

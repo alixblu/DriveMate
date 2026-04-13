@@ -9,7 +9,8 @@ export function Dashboard({
   selectedRoute, 
   setActiveTab, 
   runningCostLabel,
-  formatCurrency 
+  formatCurrency,
+  onOpenNotifications,
 }) {
   return (
     <>
@@ -18,7 +19,12 @@ export function Dashboard({
           <button className="circle-button" type="button" aria-label="Menu">
             <Icon name="menu" />
           </button>
-          <button className="circle-button notification-button" type="button" aria-label="Notifications">
+          <button
+            className="circle-button notification-button"
+            type="button"
+            aria-label="Notifications"
+            onClick={onOpenNotifications}
+          >
             <Icon name="bell" />
             <span />
           </button>
@@ -100,7 +106,7 @@ export function Dashboard({
             </div>
             <div className="mini-metric">
               <span>{runningCostLabel.replace(' est.', '')}</span>
-              <strong>{formatCurrency(commute.fuel)}</strong>
+              <strong>{formatCurrency(commute.charging)}</strong>
             </div>
           </div>
 
@@ -126,7 +132,7 @@ export function Dashboard({
             <h2>{activeVehicle.shortName}: charging rates up slightly</h2>
             <p>
               Blended kWh is higher this week. The balanced lane trims highway drag—worth it when you are in the
-              electric car; switch to the {activeVehicle.shortName === 'VF 8' ? 'Volvo' : 'VF 8'} in Garage if you need {activeVehicle.shortName === 'VF 8' ? 'diesel' : 'electric'} estimates.
+              electric car; use Garage to compare charging behavior across your saved EV profiles.
             </p>
           </div>
           <button

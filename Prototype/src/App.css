@@ -1035,6 +1035,142 @@
   margin: 0;
 }
 
+.assistant-destination-box {
+  margin: 0;
+  border: 1px solid rgba(24, 180, 107, 0.2);
+  background: linear-gradient(180deg, #f4fcf7, #ffffff);
+}
+
+.assistant-destination-row {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.assistant-destination-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: rgba(24, 180, 107, 0.16);
+  color: #15803d;
+  flex-shrink: 0;
+}
+
+.assistant-destination-row strong {
+  display: block;
+  font-size: 0.95rem;
+  color: #111827;
+}
+
+.assistant-destination-row p {
+  margin: 2px 0 0;
+  color: #6b7280;
+  font-size: 0.8rem;
+}
+
+.assistant-destination-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.assistant-destination-head h2 {
+  margin: 4px 0 0;
+  font-size: 1rem;
+  color: #111827;
+}
+
+.assistant-live-badge {
+  border-radius: 999px;
+  background: #eafff2;
+  color: #15803d;
+  border: 1px solid rgba(24, 180, 107, 0.35);
+  padding: 4px 8px;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.assistant-status-row {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.assistant-status-row > div {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 12px;
+  padding: 8px;
+}
+
+.assistant-status-row span {
+  display: block;
+  font-size: 0.7rem;
+  color: #6b7280;
+}
+
+.assistant-status-row strong {
+  display: block;
+  margin-top: 3px;
+  color: #111827;
+  font-size: 0.82rem;
+}
+
+.assistant-insight-strip {
+  margin: 0;
+}
+
+.assistant-insight-grid {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.assistant-insight-tile {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px;
+  border-radius: 12px;
+  background: #f8faf9;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.assistant-insight-icon {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: #eafcf2;
+  color: #18b46b;
+  flex-shrink: 0;
+}
+
+.assistant-insight-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.assistant-insight-tile p {
+  margin: 0;
+  font-size: 0.7rem;
+  color: #6b7280;
+}
+
+.assistant-insight-tile strong {
+  display: block;
+  margin-top: 2px;
+  color: #111827;
+  font-size: 0.82rem;
+}
+
 .assistant-actions-head,
 .assistant-feature-head {
   display: flex;
@@ -1098,10 +1234,44 @@
   min-height: 42px;
 }
 
+.assistant-action-chip.active {
+  border-color: rgba(24, 180, 107, 0.5);
+  background: #ecfdf3;
+  box-shadow: 0 2px 10px rgba(24, 180, 107, 0.12);
+}
+
 .assistant-action-chip svg {
   width: 16px;
   height: 16px;
   color: #18b46b;
+}
+
+.assistant-explore-panel {
+  margin-top: 12px;
+  border: 1px solid rgba(24, 180, 107, 0.2);
+  background: linear-gradient(180deg, #f7fdf9, #ffffff);
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+
+.assistant-explore-title {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.assistant-explore-list {
+  margin: 8px 0 0;
+  padding-left: 16px;
+  color: #475467;
+  font-size: 0.8rem;
+  display: grid;
+  gap: 4px;
+}
+
+.assistant-explore-panel .secondary-action {
+  margin-top: 10px;
 }
 
 .assistant-route-list {
@@ -1151,6 +1321,159 @@
 
 .assistant-feature-card .secondary-action {
   margin-top: 12px;
+}
+
+.assistant-nudges-list {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.assistant-nudge-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 12px;
+  background: #f8faf9;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.assistant-nudge-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: #eafcf2;
+  color: #18b46b;
+}
+
+.assistant-nudge-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.assistant-nudge-item strong {
+  display: block;
+  color: #111827;
+  font-size: 0.86rem;
+}
+
+.assistant-nudge-item p {
+  margin: 3px 0 0;
+  color: #6b7280;
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.assistant-nudge-cta {
+  border: 1px solid rgba(24, 180, 107, 0.28);
+  background: linear-gradient(180deg, #ffffff, #eefaf2);
+  color: #15803d;
+  border-radius: 12px;
+  padding: 6px 9px;
+  min-width: 84px;
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.assistant-nudge-cta span {
+  font-size: 0.74rem;
+  line-height: 1.2;
+}
+
+.assistant-nudge-cta small {
+  font-size: 0.62rem;
+  color: #6b7280;
+  font-weight: 700;
+}
+
+.assistant-nudge-cta.done {
+  background: linear-gradient(180deg, #19b86c, #14935a);
+  border-color: rgba(20, 147, 90, 0.5);
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(20, 147, 90, 0.22);
+}
+
+.assistant-nudge-cta.done small {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.assistant-sticky-actions {
+  position: static;
+  margin: 0;
+  margin-bottom: 4px;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.notifications-head-card,
+.notifications-list-card {
+  margin: 0;
+}
+
+.notifications-head-card h2 {
+  margin: 4px 0 0;
+  color: #111827;
+}
+
+.notifications-back-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: #f3f7f4;
+}
+
+.notifications-back-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.notifications-list-card {
+  display: grid;
+  gap: 10px;
+}
+
+.notification-item {
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 14px;
+  background: #f8faf9;
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.notification-pill {
+  display: inline-block;
+  border-radius: 999px;
+  background: #eafcf2;
+  color: #15803d;
+  border: 1px solid rgba(24, 180, 107, 0.3);
+  padding: 2px 8px;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.notification-item strong {
+  display: block;
+  margin-top: 8px;
+  color: #111827;
+}
+
+.notification-item p {
+  margin: 4px 0 0;
+  color: #6b7280;
+  font-size: 0.82rem;
+  line-height: 1.4;
 }
 
 @keyframes voice-chat-backdrop-in {

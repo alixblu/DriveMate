@@ -11,6 +11,7 @@ import { RoutesPage } from './pages/RoutesPage';
 import { AssistantPage } from './pages/AssistantPage';
 import { WalletPage } from './pages/WalletPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { NotificationsPage } from './pages/NotificationsPage';
 
 // Data
 import { 
@@ -88,7 +89,7 @@ export default function App() {
     () => vehicles.find((v) => v.id === activeVehicleId) ?? vehicles[0],
     [activeVehicleId]
   );
-  const runningCostLabel = activeVehicle.powertrain === 'ev' ? 'Energy est.' : 'Fuel est.';
+  const runningCostLabel = 'Charging est.';
   const recommendedTopUp = Math.max(200, weeklySpend - walletBalance);
 
   const hasSpeechSupport = typeof window !== 'undefined' && 'speechSynthesis' in window;
@@ -279,6 +280,14 @@ export default function App() {
           selectedRoute={selectedRoute}
           setActiveTab={setActiveTab}
           runningCostLabel={runningCostLabel}
+          formatCurrency={formatCurrency}
+          onOpenNotifications={() => setActiveTab('notifications')}
+        />
+      )}
+      {activeTab === 'notifications' && (
+        <NotificationsPage
+          setActiveTab={setActiveTab}
+          recommendedTopUp={recommendedTopUp}
           formatCurrency={formatCurrency}
         />
       )}

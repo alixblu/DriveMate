@@ -141,6 +141,12 @@ export function Icon({ name }) {
           <path {...commonProps} d="M18 6 6 18M6 6l12 12" />
         </svg>
       );
+    case 'back':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path {...commonProps} d="M15 6 9 12l6 6" />
+        </svg>
+      );
     case 'mic':
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true">

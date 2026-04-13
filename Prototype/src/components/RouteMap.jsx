@@ -113,7 +113,7 @@ export function RouteMap({
             </div>
             <div>
               <span>{runningCostLabel ?? 'Running cost'}</span>
-              <strong>{formatCurrency(selectedRoute.fuel)}</strong>
+              <strong>{formatCurrency(selectedRoute.charging)}</strong>
             </div>
           </>
         ) : (

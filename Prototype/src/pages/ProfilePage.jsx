@@ -66,7 +66,7 @@ export function ProfilePage({
         <ul className="feature-list">
           <li>Morning commute prediction with confidence score.</li>
           <li>Map-based route recommendation instead of plain route text.</li>
-          <li>Wallet, fuel or EV energy, rewards, and rescue in one assistant layer.</li>
+          <li>Wallet, EV charging, parking, rewards, and rescue in one assistant layer.</li>
           <li>Weekly insight card for business value and retention story.</li>
         </ul>
       </section>
