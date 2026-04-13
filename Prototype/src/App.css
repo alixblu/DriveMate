@@ -1030,6 +1030,129 @@
   line-height: 1.45;
 }
 
+.assistant-actions-card,
+.assistant-feature-card {
+  margin: 0;
+}
+
+.assistant-actions-head,
+.assistant-feature-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.assistant-action-grid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.assistant-scenario-toggle {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #f7faf8;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.assistant-scenario-toggle > span {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.74rem;
+  color: #6b7280;
+  font-weight: 700;
+}
+
+.assistant-scenario-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.assistant-scenario-btn {
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  background: #fff;
+  color: #374151;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.assistant-scenario-btn.active {
+  border-color: rgba(24, 180, 107, 0.5);
+  background: #ecfdf3;
+  color: #15803d;
+}
+
+.assistant-action-chip {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  min-height: 42px;
+}
+
+.assistant-action-chip svg {
+  width: 16px;
+  height: 16px;
+  color: #18b46b;
+}
+
+.assistant-route-list {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.assistant-route-item {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 16px;
+  background: #f8faf9;
+  width: 100%;
+  padding: 11px 12px;
+  display: grid;
+  grid-template-columns: 1.1fr 1fr 1fr;
+  gap: 10px;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+
+.assistant-route-item.active {
+  border-color: rgba(24, 180, 107, 0.55);
+  box-shadow: 0 0 0 2px rgba(24, 180, 107, 0.15);
+  background: #f1fbf5;
+}
+
+.assistant-route-item p,
+.assistant-route-item span {
+  margin: 0;
+  font-size: 0.74rem;
+  color: #6b7280;
+}
+
+.assistant-route-item strong {
+  display: block;
+  margin-top: 2px;
+  color: #111827;
+}
+
+.assistant-feature-copy {
+  margin: 10px 0 0;
+  color: #4b5563;
+  line-height: 1.4;
+}
+
+.assistant-feature-card .secondary-action {
+  margin-top: 12px;
+}
+
 @keyframes voice-chat-backdrop-in {
   from {
     opacity: 0;
@@ -1065,9 +1188,13 @@
 }
 
 .voice-chat-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 50;
+  position: fixed;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: min(100%, 430px);
+  transform: translateX(-50%);
+  z-index: 1400;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;

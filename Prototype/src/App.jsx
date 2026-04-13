@@ -295,7 +295,17 @@ export default function App() {
           formatCurrency={formatCurrency}
         />
       )}
-      {activeTab === 'assistant' && <AssistantPage setActiveTab={setActiveTab} />}
+      {activeTab === 'assistant' && (
+        <AssistantPage
+          setActiveTab={setActiveTab}
+          setSelectedRouteId={setSelectedRouteId}
+          selectedRoute={selectedRoute}
+          activeVehicle={activeVehicle}
+          walletBalance={walletBalance}
+          recommendedTopUp={recommendedTopUp}
+          formatCurrency={formatCurrency}
+        />
+      )}
       {activeTab === 'wallet' && (
         <WalletPage
           walletBalance={walletBalance}

@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from './Icon';
-import { voiceDemoTrip, commute, scriptedConversation } from '../data/mockData';
+import { voiceDemoTrip, commute, scriptedConversation, promptResponses } from '../data/mockData';
 
 export function VoiceChatOverlay({
   voiceChatOpen,
@@ -16,6 +16,44 @@ export function VoiceChatOverlay({
   showVoiceBonus,
   streamProgress,
 }) {
+  const [draftMessage, setDraftMessage] = useState('');
+  const [manualMessages, setManualMessages] = useState([]);
+  const threadRef = useRef(null);
+
+  const streamedMessages = useMemo(
+    () => scriptedConversation.slice(0, streamProgress.mi + 1),
+    [streamProgress.mi]
+  );
+
+  const allMessages = useMemo(
+    () => [...streamedMessages, ...manualMessages],
+    [streamedMessages, manualMessages]
+  );
+
+  useEffect(() => {
+    if (!voiceChatOpen) return;
+    setDraftMessage('');
+    setManualMessages([]);
+  }, [voiceChatOpen]);
+
+  useEffect(() => {
+    if (!threadRef.current) return;
+    threadRef.current.scrollTop = threadRef.current.scrollHeight;
+  }, [streamProgress.mi, streamProgress.wc, manualMessages]);
+
+  function sendTypedMessage(event) {
+    event.preventDefault();
+    const normalized = draftMessage.trim();
+    if (!normalized) return;
+    const response = promptResponses[normalized] ?? 'I can help with routing, wallet, and energy insights.';
+    setManualMessages((curr) => [
+      ...curr,
+      { id: `m-u-${Date.now()}`, role: 'driver', content: normalized },
+      { id: `m-a-${Date.now() + 1}`, role: 'assistant', content: response },
+    ]);
+    setDraftMessage('');
+  }
+
   if (!voiceChatOpen) return null;
 
   return (
@@ -112,26 +150,58 @@ export function VoiceChatOverlay({
                 </div>
               </div>
 
-              <div className="message-list">
-                {scriptedConversation.slice(0, streamProgress.mi + 1).map((msg, idx) => {
-                  const isLast = idx === streamProgress.mi;
+              <div ref={threadRef} className="conversation-thread assistant-demo-thread">
+                {allMessages.map((msg, idx) => {
+                  const isStreamed = idx < streamedMessages.length;
+                  const isLastStreamed = isStreamed && idx === streamProgress.mi;
                   const words = msg.content.trim().split(/\s+/).filter(Boolean);
-                  const displayContent = isLast ? words.slice(0, streamProgress.wc).join(' ') : msg.content;
+                  const displayContent = isLastStreamed ? words.slice(0, streamProgress.wc).join(' ') : msg.content;
 
-                  if (isLast && streamProgress.wc === 0) return null;
+                  if (isLastStreamed && streamProgress.wc === 0) return null;
 
                   return (
                     <div
                       key={msg.id}
                       id={`conv-msg-${msg.id}`}
-                      className={`message-item ${msg.role === 'assistant' ? 'assistant-msg' : 'user-msg'}`}
+                      className={`message-row ${msg.role === 'assistant' ? 'assistant' : 'driver'}`}
                     >
-                      <div className="message-bubble">{displayContent}</div>
+                      <div className={`message-bubble ${msg.role === 'assistant' ? 'assistant' : 'driver'}`}>
+                        {displayContent}
+                      </div>
                     </div>
                   );
                 })}
               </div>
             </section>
+          </div>
+
+          <div className="voice-chat-composer-dock">
+            <form className="chat-composer chat-composer-row" onSubmit={sendTypedMessage}>
+              <input
+                type="text"
+                value={draftMessage}
+                onChange={(event) => setDraftMessage(event.target.value)}
+                placeholder="Type to ask DriveMate AI..."
+                aria-label="Message DriveMate AI"
+              />
+              <div className="composer-action-group">
+                <button
+                  type="button"
+                  className="composer-icon-btn"
+                  onClick={() =>
+                    voiceState === 'listening' || voiceState === 'transcribing'
+                      ? stopRecognition()
+                      : startLiveRecognition()
+                  }
+                  aria-label="Start voice input"
+                >
+                  <Icon name="mic" />
+                </button>
+                <button type="submit" className="composer-icon-btn composer-send-btn" aria-label="Send message">
+                  <Icon name="send" />
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       </div>
