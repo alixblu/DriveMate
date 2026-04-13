@@ -4,10 +4,12 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --configLoader native --host 127.0.0.1 --port 4173",
+    "dev:stack": "powershell -ExecutionPolicy Bypass -File ./scripts/start-dev-stack.ps1",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "capture:assets": "powershell -ExecutionPolicy Bypass -File ./scripts/capture-demo-assets.ps1"
   },
   "dependencies": {
     "react": "^19.2.4",

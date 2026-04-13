@@ -1,0 +1,10 @@
+{
+  "name": "drivemate-workspace",
+  "private": true,
+  "scripts": {
+    "dev": "powershell -ExecutionPolicy Bypass -File ./Prototype/scripts/start-dev-stack.ps1",
+    "dev:web": "npm --prefix ./Prototype run dev",
+    "lint": "npm --prefix ./Prototype run lint",
+    "build": "npm --prefix ./Prototype run build"
+  }
+}

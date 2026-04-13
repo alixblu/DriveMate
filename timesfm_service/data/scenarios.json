@@ -1,0 +1,159 @@
+{
+  "fuel-hike": {
+    "commuteHistory": {
+      "destination": "District 1 Office",
+      "granularityMinutes": 5,
+      "departureSlots": [
+        "07:25",
+        "07:30",
+        "07:35",
+        "07:40",
+        "07:45",
+        "07:50",
+        "07:55",
+        "08:00",
+        "08:05",
+        "08:10"
+      ],
+      "series": [
+        31, 30, 28, 27, 28, 31, 33, 35, 36, 38,
+        32, 30, 29, 28, 29, 32, 34, 35, 37, 39,
+        30, 29, 28, 26, 27, 31, 34, 36, 38, 39,
+        31, 29, 27, 26, 27, 30, 33, 35, 37, 38,
+        32, 30, 28, 27, 28, 31, 34, 36, 37, 39
+      ]
+    },
+    "fuelHistory": {
+      "fuelType": "RON95-III",
+      "currentPriceVndPerLitre": 24300,
+      "weeklyLitres": 160,
+      "series": [
+        23600, 23600, 23700, 23700, 23800, 23800,
+        23900, 24000, 24000, 24100, 24200, 24300
+      ]
+    },
+    "fallbackCommuteWindow": {
+      "destination": "District 1 Office",
+      "etaRangeMin": [24, 35],
+      "trafficBand": "Peak traffic between 07:50 and 08:30",
+      "bestDepartureWindow": "07:35 - 07:50",
+      "bestDepartureTime": "07:40",
+      "confidencePct": 82,
+      "source": "seeded-service-fallback"
+    },
+    "fallbackFuelTrend": {
+      "fuelType": "RON95-III",
+      "currentPriceVndPerLitre": 24300,
+      "nextPriceVndPerLitre": 24800,
+      "deltaVnd": 500,
+      "trendDirection": "up",
+      "confidence": 84,
+      "estimatedWeeklyImpactVnd": 80000,
+      "source": "seeded-service-fallback"
+    }
+  },
+  "stable": {
+    "commuteHistory": {
+      "destination": "District 1 Office",
+      "granularityMinutes": 5,
+      "departureSlots": [
+        "07:30",
+        "07:35",
+        "07:40",
+        "07:45",
+        "07:50",
+        "07:55",
+        "08:00",
+        "08:05",
+        "08:10",
+        "08:15"
+      ],
+      "series": [
+        30, 29, 28, 27, 28, 30, 32, 34, 35, 36,
+        31, 30, 29, 28, 29, 30, 33, 34, 35, 36,
+        30, 29, 28, 27, 28, 31, 32, 34, 35, 36,
+        31, 29, 28, 27, 28, 30, 32, 33, 34, 35,
+        30, 29, 28, 27, 28, 30, 32, 34, 35, 36
+      ]
+    },
+    "fuelHistory": {
+      "fuelType": "RON95-III",
+      "currentPriceVndPerLitre": 24300,
+      "weeklyLitres": 160,
+      "series": [
+        24200, 24200, 24300, 24300, 24300, 24300,
+        24300, 24300, 24300, 24300, 24300, 24300
+      ]
+    },
+    "fallbackCommuteWindow": {
+      "destination": "District 1 Office",
+      "etaRangeMin": [26, 36],
+      "trafficBand": "Traffic is moderate but still thick after 08:00",
+      "bestDepartureWindow": "07:45 - 08:00",
+      "bestDepartureTime": "07:50",
+      "confidencePct": 78,
+      "source": "seeded-service-fallback"
+    },
+    "fallbackFuelTrend": {
+      "fuelType": "RON95-III",
+      "currentPriceVndPerLitre": 24300,
+      "nextPriceVndPerLitre": 24300,
+      "deltaVnd": 0,
+      "trendDirection": "flat",
+      "confidence": 79,
+      "estimatedWeeklyImpactVnd": 0,
+      "source": "seeded-service-fallback"
+    }
+  },
+  "fallback": {
+    "commuteHistory": {
+      "destination": "District 1 Office",
+      "granularityMinutes": 5,
+      "departureSlots": [
+        "07:25",
+        "07:30",
+        "07:35",
+        "07:40",
+        "07:45",
+        "07:50",
+        "07:55",
+        "08:00",
+        "08:05",
+        "08:10"
+      ],
+      "series": [
+        31, 30, 28, 27, 28, 31, 33, 35, 36, 38,
+        32, 30, 29, 28, 29, 32, 34, 35, 37, 39,
+        30, 29, 28, 26, 27, 31, 34, 36, 38, 39
+      ]
+    },
+    "fuelHistory": {
+      "fuelType": "RON95-III",
+      "currentPriceVndPerLitre": 24300,
+      "weeklyLitres": 160,
+      "series": [
+        23600, 23600, 23700, 23700, 23800, 23800,
+        23900, 24000, 24000, 24100, 24200, 24300
+      ]
+    },
+    "fallbackCommuteWindow": {
+      "destination": "District 1 Office",
+      "etaRangeMin": [25, 36],
+      "trafficBand": "Seeded backup predicts the same 07:50 to 08:30 peak jam",
+      "bestDepartureWindow": "07:35 - 07:50",
+      "bestDepartureTime": "07:40",
+      "confidencePct": 74,
+      "source": "seeded-service-fallback"
+    },
+    "fallbackFuelTrend": {
+      "fuelType": "RON95-III",
+      "currentPriceVndPerLitre": 24300,
+      "nextPriceVndPerLitre": 24800,
+      "deltaVnd": 500,
+      "trendDirection": "up",
+      "confidence": 72,
+      "estimatedWeeklyImpactVnd": 80000,
+      "source": "seeded-service-fallback"
+    }
+  }
+}

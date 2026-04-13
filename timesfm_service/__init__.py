@@ -1,0 +1,1 @@
+"""DriveMate TimesFM forecasting sidecar."""

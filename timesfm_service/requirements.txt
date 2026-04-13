@@ -1,0 +1,9 @@
+# If PyTorch needs a platform-specific wheel on your machine, install torch first
+# using the official instructions from https://pytorch.org/get-started/locally/
+# and then install the rest of this file.
+fastapi>=0.116,<1.0
+uvicorn[standard]>=0.35,<1.0
+numpy>=2.0,<3.0
+pydantic>=2.11,<3.0
+torch>=2.6,<3.0
+timesfm @ git+https://github.com/google-research/timesfm.git
