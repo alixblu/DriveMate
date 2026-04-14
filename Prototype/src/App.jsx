@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import './App.css';
 
-// Components
 import { Layout } from './components/Layout';
 import { VoiceChatOverlay } from './components/VoiceChatOverlay';
 
-// Pages
 import { Dashboard } from './pages/Dashboard';
 import { RoutesPage } from './pages/RoutesPage';
 import { AssistantPage } from './pages/AssistantPage';
@@ -13,90 +11,148 @@ import { WalletPage } from './pages/WalletPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { NotificationsPage } from './pages/NotificationsPage';
 
-// Data
-import { 
-  vehicles, 
-  routes, 
-  promptResponses, 
-  scriptedConversation 
-} from './data/mockData';
+import { vehicles } from './data/mockData';
+import {
+  DEFAULT_SCENARIO_ID,
+  buildAssistantReply,
+  createDriveMateSnapshot,
+  scenarioCatalog,
+} from './lib/predictionEngine';
 
-/** Pace on-screen word reveals to roughly match Web Speech TTS length for the same line. */
-function estimateScriptLineSpeechMs(text, preferredVoice) {
-  const words = text.trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return 0;
-  const rate = preferredVoice === 'male' ? 0.98 : 1;
-  const wpm = 140 * rate;
-  const minutes = words.length / wpm;
-  return Math.max(720, minutes * 60 * 1000);
+function pickInitialTab() {
+  if (typeof window === 'undefined') {
+    return 'home';
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const tab = params.get('tab');
+  const allowedTabs = new Set(['home', 'routes', 'assistant', 'wallet', 'profile', 'notifications']);
+
+  return allowedTabs.has(tab) ? tab : 'home';
 }
 
-function pickVoice(voices, gender) {
-  const englishVoices = voices.filter((voice) => voice.lang?.toLowerCase().startsWith('en'));
-  const searchableVoices = englishVoices.length ? englishVoices : voices;
-  const hints = gender === 'male'
-    ? ['male', 'david', 'alex', 'daniel', 'fred', 'thomas', 'ryan', 'andrew', 'guy']
-    : ['female', 'zira', 'samantha', 'victoria', 'karen', 'ava', 'emma', 'aria', 'jenny'];
+function pickInitialScenario() {
+  if (typeof window === 'undefined') {
+    return DEFAULT_SCENARIO_ID;
+  }
 
-  return searchableVoices.find((voice) =>
-    hints.some((hint) => `${voice.name} ${voice.voiceURI}`.toLowerCase().includes(hint))
-  ) ?? searchableVoices[0] ?? null;
+  const params = new URLSearchParams(window.location.search);
+  const scenarioId = params.get('scenario');
+
+  return scenarioCatalog.some((scenario) => scenario.id === scenarioId)
+    ? scenarioId
+    : DEFAULT_SCENARIO_ID;
+}
+
+function pickVoice(voices) {
+  const preferredVoices = voices.filter((voice) =>
+    voice.lang?.toLowerCase().startsWith('en'),
+  );
+  const searchable = preferredVoices.length ? preferredVoices : voices;
+
+  return (
+    searchable.find((voice) =>
+      ['jenny', 'samantha', 'aria', 'zira', 'emma', 'davis', 'guy'].some((hint) =>
+        `${voice.name} ${voice.voiceURI}`.toLowerCase().includes(hint),
+      ),
+    ) ?? searchable[0] ?? null
+  );
+}
+
+function createDecisionMessages(snapshot) {
+  return [
+    {
+      id: `assistant-seed-${snapshot.scenario.id}-${snapshot.vehicle.id}`,
+      role: 'assistant',
+      title: 'Daily decision',
+      content: snapshot.assistantBrief.explanation,
+    },
+  ];
 }
 
 function formatCurrency(value) {
-  return `${value}k`;
+  return `${new Intl.NumberFormat('vi-VN').format(value)} VND`;
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('home');
-  const [activeVehicleId, setActiveVehicleId] = useState('vinfast-vf8');
-  const [selectedRouteId, setSelectedRouteId] = useState('balance');
-  const [walletBalance, setWalletBalance] = useState(120);
-  const [rewardPoints, setRewardPoints] = useState(1250);
+  const initialScenarioId = pickInitialScenario();
+  const initialVehicleId = 'toyota-vios';
+  const initialSnapshot = createDriveMateSnapshot({
+    scenarioId: initialScenarioId,
+    vehicleId: initialVehicleId,
+  });
+
+  const [activeTab, setActiveTab] = useState(pickInitialTab);
+  const [scenarioId, setScenarioId] = useState(initialScenarioId);
+  const [activeVehicleId, setActiveVehicleId] = useState(initialVehicleId);
+  const [selectedRouteId, setSelectedRouteId] = useState(initialSnapshot.recommendedRouteId);
+  const [walletBalance, setWalletBalance] = useState(initialSnapshot.walletForecast.balanceVnd);
+  const [rewardPoints, setRewardPoints] = useState(initialSnapshot.rewards.points);
   const [tripCompleted, setTripCompleted] = useState(false);
-  const [, setMessages] = useState([]);
-  const [fullDemoActive, setFullDemoActive] = useState(false);
-  const [, setDraftMessage] = useState('');
+  const [messages, setMessages] = useState(() => createDecisionMessages(initialSnapshot));
   const [voiceState, setVoiceState] = useState('idle');
-  const [availableVoices, setAvailableVoices] = useState([]);
   const [voiceError, setVoiceError] = useState('');
   const [voiceChatOpen, setVoiceChatOpen] = useState(false);
-  const [streamProgress, setStreamProgress] = useState({ mi: 0, wc: 0 });
+  const [availableVoices, setAvailableVoices] = useState([]);
 
-  const speechUtteranceRef = useRef(null);
   const recognitionRef = useRef(null);
+  const speechUtteranceRef = useRef(null);
   const finalTranscriptRef = useRef('');
-  const streamProgressRef = useRef(streamProgress);
-  const scriptTimersRef = useRef([]);
-  const scriptDemoCancelledRef = useRef(false);
 
-  const VOICE_CTX_DEST_MI = 0;
-  const VOICE_CTX_ROUTE_MI = 5;
-  const VOICE_CTX_BONUS_MI = 10;
-  const VOICE_CTX_NEXT_ACTION_MI = 15;
+  const snapshot = useMemo(
+    () =>
+      createDriveMateSnapshot({
+        scenarioId,
+        vehicleId: activeVehicleId,
+        selectedRouteId,
+        walletBalance,
+        rewardPoints,
+        tripCompleted,
+      }),
+    [activeVehicleId, rewardPoints, scenarioId, selectedRouteId, tripCompleted, walletBalance],
+  );
 
-  function clearScriptTimers() {
-    scriptTimersRef.current.forEach((id) => window.clearTimeout(id));
-    scriptTimersRef.current = [];
+  const activeVehicle =
+    vehicles.find((vehicle) => vehicle.id === activeVehicleId) ?? vehicles[0];
+
+  function resetDemoState(nextScenarioId, nextVehicleId) {
+    const seededSnapshot = createDriveMateSnapshot({
+      scenarioId: nextScenarioId,
+      vehicleId: nextVehicleId,
+    });
+
+    setSelectedRouteId(seededSnapshot.recommendedRouteId);
+    setWalletBalance(seededSnapshot.walletForecast.balanceVnd);
+    setRewardPoints(seededSnapshot.rewards.points);
+    setTripCompleted(false);
+    setMessages(createDecisionMessages(seededSnapshot));
   }
 
-  const weeklySpend = 300;
-  const selectedRoute = useMemo(
-    () => routes.find((route) => route.id === selectedRouteId) ?? routes[0],
-    [selectedRouteId]
-  );
-  const activeVehicle = useMemo(
-    () => vehicles.find((v) => v.id === activeVehicleId) ?? vehicles[0],
-    [activeVehicleId]
-  );
-  const runningCostLabel = 'Charging est.';
-  const recommendedTopUp = Math.max(200, weeklySpend - walletBalance);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    params.set('tab', activeTab);
+    params.set('scenario', scenarioId);
+    window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+  }, [activeTab, scenarioId]);
 
-  const hasSpeechSupport = typeof window !== 'undefined' && 'speechSynthesis' in window;
-  const hasRecognitionSupport = typeof window !== 'undefined' && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
+  const hasSpeechSupport =
+    typeof window !== 'undefined' && 'speechSynthesis' in window;
+  const hasRecognitionSupport =
+    typeof window !== 'undefined' &&
+    ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
+  const preferredVoice = useMemo(() => pickVoice(availableVoices), [availableVoices]);
 
-  const maleVoice = useMemo(() => pickVoice(availableVoices, 'male'), [availableVoices]);
-  const femaleVoice = useMemo(() => pickVoice(availableVoices, 'female'), [availableVoices]);
+  useEffect(() => {
+    if (!hasSpeechSupport) return;
+    const loadVoices = () => setAvailableVoices(window.speechSynthesis.getVoices());
+    loadVoices();
+    window.speechSynthesis.addEventListener('voiceschanged', loadVoices);
+
+    return () => {
+      window.speechSynthesis.removeEventListener('voiceschanged', loadVoices);
+    };
+  }, [hasSpeechSupport]);
 
   function stopSpeechPlayback() {
     if (!hasSpeechSupport) return;
@@ -105,30 +161,79 @@ export default function App() {
   }
 
   function stopRecognition() {
-    if (recognitionRef.current) recognitionRef.current.stop();
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
   }
 
-  function speakText(text, preferredVoice, onDone) {
-    if (!hasSpeechSupport) { onDone?.(); return; }
+  function speakText(text, onDone) {
+    if (!hasSpeechSupport) {
+      onDone?.();
+      return;
+    }
+
     stopSpeechPlayback();
     const utterance = new window.SpeechSynthesisUtterance(text);
-    const voice = preferredVoice === 'male' ? maleVoice : femaleVoice;
-    if (voice) { utterance.voice = voice; utterance.lang = voice.lang; } else { utterance.lang = 'en-US'; }
-    utterance.rate = preferredVoice === 'male' ? 0.98 : 1;
-    utterance.pitch = preferredVoice === 'male' ? 0.88 : 1.14;
-    
+
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
+      utterance.lang = preferredVoice.lang;
+    } else {
+      utterance.lang = 'en-US';
+    }
+
+    utterance.rate = 0.98;
+    utterance.pitch = 1;
+
     let finished = false;
-    utterance.onend = () => { if (!finished) { finished = true; speechUtteranceRef.current = null; onDone?.(); } };
-    utterance.onerror = () => { setVoiceState('paused'); if (!finished) { finished = true; speechUtteranceRef.current = null; onDone?.(); } };
+    utterance.onend = () => {
+      if (finished) return;
+      finished = true;
+      speechUtteranceRef.current = null;
+      onDone?.();
+    };
+    utterance.onerror = () => {
+      if (finished) return;
+      finished = true;
+      speechUtteranceRef.current = null;
+      setVoiceState('paused');
+      onDone?.();
+    };
+
     speechUtteranceRef.current = utterance;
     window.speechSynthesis.speak(utterance);
   }
 
+  function handleAsk(prompt) {
+    const normalized = prompt.trim();
+    if (!normalized) return '';
+
+    const response = buildAssistantReply(normalized, snapshot);
+    const timestamp = Date.now();
+    setMessages((currentMessages) => [
+      ...currentMessages,
+      { id: `user-${timestamp}`, role: 'driver', content: normalized },
+      {
+        id: `assistant-${timestamp + 1}`,
+        role: 'assistant',
+        title: response.title,
+        content: response.answer,
+      },
+    ]);
+    setActiveTab('assistant');
+
+    return response.answer;
+  }
+
   function deliverAiResponse(prompt) {
     const aiResponse = handleAsk(prompt);
-    if (!aiResponse) { setVoiceState('idle'); return; }
-    setVoiceState('playing');
-    speakText(aiResponse, 'female', () => setVoiceState('idle'));
+    if (!aiResponse) {
+      setVoiceState('idle');
+      return;
+    }
+
+    setVoiceState('speaking');
+    speakText(aiResponse, () => setVoiceState('idle'));
   }
 
   function startLiveRecognition() {
@@ -137,202 +242,179 @@ export default function App() {
       setVoiceState('idle');
       return;
     }
-    const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    const SpeechRecognitionCtor =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
     if (!recognitionRef.current) {
       const recognition = new SpeechRecognitionCtor();
       recognition.lang = 'en-US';
       recognition.interimResults = true;
       recognition.maxAlternatives = 1;
+
       recognition.onstart = () => setVoiceState('listening');
       recognition.onresult = (event) => {
         let transcript = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) transcript += event.results[i][0].transcript;
-        setVoiceState('transcribing');
+        for (let index = event.resultIndex; index < event.results.length; index += 1) {
+          transcript += event.results[index][0].transcript;
+        }
         finalTranscriptRef.current = transcript.trim();
+        setVoiceState('transcribing');
       };
-      recognition.onerror = () => { setVoiceError('Speech recognition error.'); setVoiceState('paused'); };
+      recognition.onerror = () => {
+        setVoiceError('Speech recognition error.');
+        setVoiceState('paused');
+      };
       recognition.onend = () => {
-        const final = finalTranscriptRef.current.trim();
-        if (final) { setVoiceState('answering'); deliverAiResponse(final); finalTranscriptRef.current = ''; return; }
+        const finalPrompt = finalTranscriptRef.current.trim();
+        if (finalPrompt) {
+          setVoiceState('answering');
+          deliverAiResponse(finalPrompt);
+          finalTranscriptRef.current = '';
+          return;
+        }
         setVoiceState('idle');
       };
+
       recognitionRef.current = recognition;
     }
+
     stopSpeechPlayback();
     setVoiceError('');
     finalTranscriptRef.current = '';
     recognitionRef.current.start();
   }
 
-  function handleAsk(prompt) {
-    const normalized = prompt.trim();
-    if (!normalized) return;
-    const response = promptResponses[normalized] ?? 'I can help with routing, wallet, and energy insights.';
-    setMessages((curr) => [...curr, { role: 'user', content: normalized }, { role: 'assistant', content: response }]);
-    setDraftMessage('');
-    return response;
+  function handleReadAloud() {
+    const latestAssistantMessage = [...messages]
+      .reverse()
+      .find((message) => message.role === 'assistant');
+
+    if (!latestAssistantMessage) {
+      return;
+    }
+
+    setVoiceState('speaking');
+    speakText(
+      `${latestAssistantMessage.title ? `${latestAssistantMessage.title}. ` : ''}${latestAssistantMessage.content}`,
+      () => setVoiceState('idle'),
+    );
   }
 
-  function handleTopUp() { setWalletBalance((c) => c + recommendedTopUp); }
+  function handleTopUp() {
+    setWalletBalance(
+      (currentBalance) => currentBalance + snapshot.walletForecast.suggestedTopUpVnd,
+    );
+    setRewardPoints((currentPoints) => currentPoints + 20);
+  }
+
   function handleCompleteTrip() {
     if (tripCompleted) return;
+
     setTripCompleted(true);
-    setWalletBalance((c) => Math.max(0, c - selectedRoute.toll));
-    setRewardPoints((c) => c + 25);
-    setActiveTab('profile');
+    setWalletBalance((currentBalance) =>
+      Math.max(0, currentBalance - snapshot.selectedRoute.tollVnd),
+    );
+    setRewardPoints(
+      (currentPoints) => currentPoints + snapshot.rewards.recommendedRouteBonus,
+    );
+    setMessages((currentMessages) => [
+      ...currentMessages,
+      {
+        id: `assistant-trip-${Date.now()}`,
+        role: 'assistant',
+        title: 'Trip logged',
+        content:
+          snapshot.scenario.carWashPrompt && snapshot.vehicle.powertrain === 'ice'
+            ? 'Trip saved. Rainy traffic is why DriveMate now suggests a car wash after work.'
+            : 'Trip saved. DriveMate will keep using this corridor pattern to time wallet, toll, and destination support.',
+      },
+    ]);
+    setActiveTab('notifications');
   }
-
-  useEffect(() => {
-    if (!hasSpeechSupport) return;
-    const loadVoices = () => setAvailableVoices(window.speechSynthesis.getVoices());
-    loadVoices();
-    window.speechSynthesis.addEventListener('voiceschanged', loadVoices);
-    return () => window.speechSynthesis.removeEventListener('voiceschanged', loadVoices);
-  }, [hasSpeechSupport]);
-
-  useEffect(() => {
-    streamProgressRef.current = streamProgress;
-  }, [streamProgress]);
-
-  function playScriptMessageAtIndex(mi, onComplete) {
-    const entry = scriptedConversation[mi];
-    if (!entry) { onComplete?.(); return; }
-    const words = entry.content.trim().split(/\s+/).filter(Boolean);
-    if (words.length === 0) { setStreamProgress({ mi: mi + 1, wc: 0 }); onComplete?.(); return; }
-    const voice = entry.role === 'driver' ? 'male' : 'female';
-    const speechMs = estimateScriptLineSpeechMs(entry.content, voice);
-    const gapMs = words.length <= 1 ? 0 : Math.round(speechMs / (words.length - 1));
-    let wi = 0; let streamDone = false; let speechDone = !hasSpeechSupport; let speechStarted = false;
-    function tryFinish() { if (streamDone && speechDone) { if (!scriptDemoCancelledRef.current) { setStreamProgress({ mi: mi + 1, wc: 0 }); onComplete?.(); } } }
-    function wordTick() {
-      if (scriptDemoCancelledRef.current) return;
-      wi += 1; setStreamProgress({ mi, wc: wi });
-      if (hasSpeechSupport && wi === 1 && !speechStarted) {
-        speechStarted = true;
-        speakText(entry.content, voice, () => {
-          if (scriptDemoCancelledRef.current) return;
-          if (wi < words.length) { clearScriptTimers(); wi = words.length; setStreamProgress({ mi, wc: words.length }); streamDone = true; }
-          speechDone = true; tryFinish();
-        });
-      }
-      if (wi < words.length) {
-        const tid = window.setTimeout(wordTick, gapMs);
-        scriptTimersRef.current.push(tid);
-        return;
-      }
-      streamDone = true;
-      if (!hasSpeechSupport) speechDone = true;
-      tryFinish();
-    }
-    wordTick();
-  }
-
-  function startFullScriptDemo() {
-    const { mi } = streamProgressRef.current;
-    if (mi >= scriptedConversation.length) return;
-    scriptDemoCancelledRef.current = false;
-    setFullDemoActive(true);
-    const run = (idx) => {
-      if (scriptDemoCancelledRef.current || idx >= scriptedConversation.length) { setFullDemoActive(false); return; }
-      playScriptMessageAtIndex(idx, () => run(idx + 1));
-    };
-    run(mi);
-  }
-
-  useEffect(() => {
-    if (!voiceChatOpen) return;
-    scriptDemoCancelledRef.current = false;
-    clearScriptTimers();
-    setStreamProgress({ mi: 0, wc: 0 });
-    streamProgressRef.current = { mi: 0, wc: 0 };
-    const tid = setTimeout(() => startFullScriptDemo(), 100);
-    return () => {
-      scriptDemoCancelledRef.current = true;
-      clearTimeout(tid);
-      clearScriptTimers();
-      stopSpeechPlayback();
-    };
-  }, [voiceChatOpen]);
 
   function closeVoiceChat() {
-    scriptDemoCancelledRef.current = true;
-    clearScriptTimers();
-    setFullDemoActive(false);
-    setVoiceChatOpen(false);
     stopRecognition();
     stopSpeechPlayback();
     setVoiceError('');
+    setVoiceState('idle');
+    setVoiceChatOpen(false);
   }
 
-  const voiceScriptStarted = fullDemoActive || streamProgress.mi > 0 || streamProgress.wc > 0;
-  const showVoiceDestination = voiceScriptStarted && streamProgress.mi >= VOICE_CTX_DEST_MI;
-  const showVoiceRouteBlock = voiceScriptStarted && streamProgress.mi >= VOICE_CTX_ROUTE_MI;
-  const showVoiceBonus = voiceScriptStarted && streamProgress.mi >= VOICE_CTX_BONUS_MI;
-  const showVoiceNextAction = voiceScriptStarted && streamProgress.mi >= VOICE_CTX_NEXT_ACTION_MI;
-  const showVoiceTripContext = showVoiceDestination || showVoiceRouteBlock || showVoiceBonus || showVoiceNextAction;
-
   return (
-    <Layout activeTab={activeTab} setActiveTab={setActiveTab} openVoiceChat={() => setVoiceChatOpen(true)}>
+    <Layout
+      activeTab={activeTab}
+      setActiveTab={setActiveTab}
+      openVoiceChat={() => setVoiceChatOpen(true)}
+    >
       {activeTab === 'home' && (
         <Dashboard
+          snapshot={snapshot}
+          scenarioCatalog={scenarioCatalog}
+          scenarioId={scenarioId}
+          setScenarioId={(nextScenarioId) => {
+            setScenarioId(nextScenarioId);
+            resetDemoState(nextScenarioId, activeVehicleId);
+            setActiveTab('home');
+          }}
           activeVehicle={activeVehicle}
           walletBalance={walletBalance}
-          selectedRoute={selectedRoute}
+          selectedRoute={snapshot.selectedRoute}
           setActiveTab={setActiveTab}
-          runningCostLabel={runningCostLabel}
           formatCurrency={formatCurrency}
           onOpenNotifications={() => setActiveTab('notifications')}
         />
       )}
+
       {activeTab === 'notifications' && (
         <NotificationsPage
+          snapshot={snapshot}
           setActiveTab={setActiveTab}
-          recommendedTopUp={recommendedTopUp}
-          formatCurrency={formatCurrency}
         />
       )}
+
       {activeTab === 'routes' && (
         <RoutesPage
-          selectedRoute={selectedRoute}
+          snapshot={snapshot}
+          selectedRoute={snapshot.selectedRoute}
           setSelectedRouteId={setSelectedRouteId}
           activeVehicle={activeVehicle}
           walletBalance={walletBalance}
           tripCompleted={tripCompleted}
           handleCompleteTrip={handleCompleteTrip}
           setActiveTab={setActiveTab}
-          runningCostLabel={runningCostLabel}
           formatCurrency={formatCurrency}
         />
       )}
+
       {activeTab === 'assistant' && (
         <AssistantPage
+          snapshot={snapshot}
           setActiveTab={setActiveTab}
           setSelectedRouteId={setSelectedRouteId}
-          selectedRoute={selectedRoute}
-          activeVehicle={activeVehicle}
-          walletBalance={walletBalance}
-          recommendedTopUp={recommendedTopUp}
           formatCurrency={formatCurrency}
         />
       )}
+
       {activeTab === 'wallet' && (
         <WalletPage
+          snapshot={snapshot}
           walletBalance={walletBalance}
-          weeklySpend={weeklySpend}
-          recommendedTopUp={recommendedTopUp}
           rewardPoints={rewardPoints}
           handleTopUp={handleTopUp}
           setActiveTab={setActiveTab}
           formatCurrency={formatCurrency}
         />
       )}
+
       {activeTab === 'profile' && (
         <ProfilePage
-          activeVehicle={activeVehicle}
+          snapshot={snapshot}
           activeVehicleId={activeVehicleId}
-          setActiveVehicleId={setActiveVehicleId}
-          runningCostLabel={runningCostLabel}
-          setActiveTab={setActiveTab}
+          setActiveVehicleId={(nextVehicleId) => {
+            setActiveVehicleId(nextVehicleId);
+            resetDemoState(scenarioId, nextVehicleId);
+          }}
         />
       )}
 
@@ -343,12 +425,11 @@ export default function App() {
         voiceError={voiceError}
         startLiveRecognition={startLiveRecognition}
         stopRecognition={stopRecognition}
-        showVoiceTripContext={showVoiceTripContext}
-        showVoiceDestination={showVoiceDestination}
-        showVoiceRouteBlock={showVoiceRouteBlock}
-        showVoiceNextAction={showVoiceNextAction}
-        showVoiceBonus={showVoiceBonus}
-        streamProgress={streamProgress}
+        voiceContext={snapshot.voiceContext}
+        quickPrompts={snapshot.quickPrompts}
+        messages={messages}
+        onAsk={handleAsk}
+        onReadAloud={handleReadAloud}
       />
     </Layout>
   );

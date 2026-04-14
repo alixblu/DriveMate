@@ -1,170 +1,156 @@
 export const user = {
-  name: 'Alex Nguyen',
+  name: 'Mai Tran',
   homeLocation: 'Thu Duc City',
   workLocation: 'District 1',
-}
+};
 
-/** Garage — VF 8 is BEV; Volvo is ICE for mixed-household demo copy. */
 export const vehicles = [
+  {
+    id: 'toyota-vios',
+    name: 'Toyota Vios',
+    shortName: 'Vios',
+    powertrain: 'ice',
+    vehicleMode: 'ICE',
+    detail: 'RON95-III · 7.2 L/100 km city mix',
+    fuelType: 'RON95-III',
+  },
   {
     id: 'vinfast-vf8',
     name: 'VinFast VF 8',
     shortName: 'VF 8',
     powertrain: 'ev',
-    detail: '82% charge · ~22 kWh/100 km blended',
+    vehicleMode: 'EV',
+    detail: '74% battery · 20.8 kWh/100 km city mix',
+    fuelType: 'Electric',
   },
-  {
-    id: 'volvo-xc60',
-    name: 'Volvo XC60',
-    shortName: 'XC60',
-    powertrain: 'ice',
-    detail: 'Diesel · ~6.8 L/100 km highway',
-  },
-]
+];
 
-export const commute = {
-  destination: 'Office',
-  confidence: 82,
-  eta: 24,
-  departureTime: '08:10',
-  toll: 35,
-  charging: 40,
-  traffic: 'Peak jam ~7:50–8:30',
-}
-
-/** AI suggested lane first (list + map draw order). aiFit = higher better; jamRisk = higher worse (Best Value carries more highway / toll stress). */
-export const routes = [
+export const routeCatalog = [
   {
-    id: 'balance',
+    id: 'best-value',
     label: 'AI suggested',
-    tag: 'Best Value',
-    eta: 35,
-    toll: 60,
+    badge: 'Best Value',
+    baseEtaMin: 27,
+    tollVnd: 34000,
     tollStations: 2,
-    tollEach: 30,
-    charging: 38,
-    aiFit: 91,
-    jamRisk: 46,
+    tollEachVnd: 17000,
+    litresUsed: 1.52,
+    kwhUsed: 4.7,
     color: '#18b46b',
     path: 'M40 178 C84 166 124 138 150 128 C176 116 218 102 278 54',
-    summary: 'Best trade-off between time, toll, and running cost today.',
-    coffeeStop: 'Highlands Coffee',
-    parkingSpot: 'Nguyen Hue Smart Parking',
+    rationale:
+      'Balances a short ETA with lower toll and energy spend than the fastest route.',
+    tollStationName: 'Phu My express gate',
+    parkingLotName: 'Nguyen Hue Smart Parking',
+    parkingDetail: '5-minute walk to the office, reserve inside VETC.',
+    chargingStationName: 'Saigon Centre EV Hub',
+    chargingDetail: '150 kW charging bays beside the parking entrance.',
+    carWashName: 'Bach Dang Express Wash',
+    carWashDetail: 'Fast exterior wash on the way home after rainy traffic.',
   },
   {
-    id: 'fast',
+    id: 'fastest',
     label: 'Fast lane',
-    tag: 'Fastest',
-    eta: 19,
-    toll: 50,
+    badge: 'Fastest',
+    baseEtaMin: 23,
+    tollVnd: 52000,
     tollStations: 1,
-    tollEach: 50,
-    charging: 47,
-    aiFit: 68,
-    jamRisk: 18,
+    tollEachVnd: 52000,
+    litresUsed: 1.71,
+    kwhUsed: 5.1,
     color: '#1f2937',
     path: 'M36 176 C80 160 112 132 142 118 C174 103 218 98 280 50',
-    summary: 'Best when arrival time matters most.',
-    coffeeStop: null,
-    parkingSpot: 'District 1 Basement Parking',
+    rationale:
+      'Wins on arrival time, but the premium toll lane makes it the most expensive option.',
+    tollStationName: 'Long Thanh premium gate',
+    parkingLotName: 'District 1 Basement Parking',
+    parkingDetail: 'Closest arrival path, but parking fills earliest.',
+    chargingStationName: 'Opera House DC Fast Charge',
+    chargingDetail: 'Quick top-up, but it adds a detour after arrival.',
+    carWashName: 'District 1 Premium Wash',
+    carWashDetail: 'Convenient after meetings, but pricier than the best-value route.',
   },
   {
-    id: 'cheap',
+    id: 'cheapest',
     label: 'Saver lane',
-    tag: 'Cheapest',
-    eta: 30,
-    toll: 18,
+    badge: 'Cheapest',
+    baseEtaMin: 34,
+    tollVnd: 18000,
     tollStations: 1,
-    tollEach: 18,
-    charging: 34,
-    aiFit: 65,
-    jamRisk: 31,
+    tollEachVnd: 18000,
+    litresUsed: 1.42,
+    kwhUsed: 4.2,
     color: '#f59e0b',
     path: 'M38 178 C86 182 108 154 138 150 C170 146 226 126 276 58',
-    summary: 'Lower toll and running cost, slightly longer city route.',
-    coffeeStop: null,
-    parkingSpot: 'Le Loi Public Parking',
+    rationale:
+      'Lowest cash outlay, but the longer city traffic window makes it the slowest choice.',
+    tollStationName: 'Mai Chi Tho city gate',
+    parkingLotName: 'Le Loi Public Parking',
+    parkingDetail: 'Lowest parking fee, but a longer walk to the office.',
+    chargingStationName: 'Le Loi Public Charger',
+    chargingDetail: 'Cheapest charge, but queues are less predictable.',
+    carWashName: 'Ben Nghe Quick Wash',
+    carWashDetail: 'Budget-friendly wash stop near the cheap lane exit.',
   },
-]
+];
 
-export const routeCoffeeStop = {
-  name: 'Highlands Coffee',
-  detail: 'On the AI suggested lane — we can remind you when you are nearby.',
-}
-
-export const routeParkingSpot = {
-  name: 'Nguyen Hue Smart Parking',
-  detail: '6-minute walk to the office, 14 EV bays available, reserve from DriveMate AI.',
-}
+export const serviceLocations = {
+  tollStations: [
+    {
+      name: 'Phu My express gate',
+      detail: 'Auto-pay compatible with VETC and lowest queue risk for the best-value route.',
+    },
+    {
+      name: 'Long Thanh premium gate',
+      detail: 'Fastest entry to District 1, but highest toll burn.',
+    },
+    {
+      name: 'Mai Chi Tho city gate',
+      detail: 'Cheaper than the express option, but city traffic is less predictable.',
+    },
+  ],
+  parkingLots: [
+    {
+      name: 'Nguyen Hue Smart Parking',
+      detail: '5-minute walk to the office, live slot count, reserve in-app.',
+    },
+    {
+      name: 'Le Loi Public Parking',
+      detail: 'Lower rate with a longer walk and fewer guaranteed spaces.',
+    },
+  ],
+  chargingStations: [
+    {
+      name: 'Saigon Centre EV Hub',
+      detail: '150 kW fast charge, beside the destination parking entrance.',
+    },
+    {
+      name: 'Opera House DC Fast Charge',
+      detail: 'Premium fast-charge option near the fastest route exit.',
+    },
+  ],
+  carWashLocations: [
+    {
+      name: 'Bach Dang Express Wash',
+      detail: 'Recommended after rainy peak-hour traffic for the best-value route.',
+    },
+    {
+      name: 'Ben Nghe Quick Wash',
+      detail: 'Budget wash stop near the cheaper return route.',
+    },
+  ],
+};
 
 export const services = [
-  { id: 'wallet', label: 'Top up', icon: 'wallet', tab: 'wallet' },
-  { id: 'reward', label: 'My Loyalty', icon: 'gift', tab: 'wallet' },
-  { id: 'bank', label: 'Bank link', icon: 'link', tab: 'wallet' },
-  { id: 'docs', label: 'Docs wallet', icon: 'document', tab: 'profile', badge: 'New' },
-  { id: 'route', label: 'AI routes', icon: 'routes', badge: 'AI' },
-  { id: 'rescue', label: 'AI rescue', icon: 'rescue', tab: 'assistant', badge: 'New' },
-  { id: 'charging', label: 'Charging coach', icon: 'fuel', tab: 'assistant' },
-  { id: 'more', label: 'More', icon: 'grid', tab: 'profile' },
-]
-
-export const quickPrompts = [
-  'Cheapest route today?',
-  'VF 8 energy cost today?',
-  'Need top-up for this week?',
-  'Any traffic ahead?',
-]
-
-export const promptResponses = {
-  'Cheapest route today?':
-    'The cheapest lane is about 18k toll and 34k in running cost, near 30 minutes. Your AI lane balances time and kWh a bit better in heat like today.',
-  'VF 8 energy cost today?':
-    'Blended charging is up roughly 120 VND per kWh. For your office run in the VF 8, budget about 42 to 48k in electricity depending on home and fast-charging share.',
-  'How long to office?':
-    'Office is about 24 to 35 minutes depending on lane. If you leave after 8:20, ETA often increases by around 9 minutes.',
-  'Need top-up for this week?':
-    'Yes. Your expected toll spend is 300k and your wallet is only 120k. I suggest a 200k top-up to stay safe.',
-  'Any traffic ahead?':
-    'Typical inbound peak on your corridor is about 7:50 to 8:30 AM—often around 15 extra minutes if you drive through the thick of it. Leaving before about 8:10 usually saves roughly 12 minutes.',
-  'Any parking near office?':
-    'Yes. Nguyen Hue Smart Parking has EV slots available this morning. It is around a 6-minute walk from your office and you can reserve a bay now.',
-  'Show my rewards':
-    'You currently have 1,250 reward points. One more recommended commute unlocks the next toll discount reward.',
-}
-
-export const articleCards = [
-  {
-    id: 1,
-    theme: 'blue',
-    title: 'AI predicts office commute in 24 minutes this morning',
-    kicker: 'DriveMate AI',
-  },
-  {
-    id: 2,
-    theme: 'green',
-    title: 'Top up early to avoid low-balance toll interruption this week',
-    kicker: 'VETC Wallet',
-  },
-  {
-    id: 3,
-    theme: 'teal',
-    title: 'EV rates edged up—balanced route saves a few percent on kWh in the heat',
-    kicker: 'Energy insight',
-  },
-  {
-    id: 4,
-    theme: 'dark',
-    title: 'Route AI can save 45 minutes weekly with better departure timing',
-    kicker: 'Weekly Report',
-  },
-]
-
-export const weeklyMetrics = [
-  { label: 'Trips', value: '14' },
-  { label: 'Saved', value: '185k' },
-  { label: 'Traffic cut', value: '45m' },
-  { label: 'Preferred car', value: 'VF 8' },
-]
+  { id: 'wallet', label: 'Toll top-up', icon: 'wallet', tab: 'wallet' },
+  { id: 'route', label: 'AI routes', icon: 'route', tab: 'routes', badge: 'AI' },
+  { id: 'parking', label: 'Parking', icon: 'document', tab: 'routes' },
+  { id: 'charging', label: 'Charging', icon: 'fuel', tab: 'assistant' },
+  { id: 'car-wash', label: 'Car wash', icon: 'wash', tab: 'assistant' },
+  { id: 'alerts', label: 'Alerts', icon: 'bell', tab: 'notifications' },
+  { id: 'assistant', label: 'Ask DriveMate', icon: 'sparkles', tab: 'assistant' },
+  { id: 'garage', label: 'Garage', icon: 'profile', tab: 'profile' },
+];
 
 export const bottomTabs = [
   { id: 'home', label: 'Home', icon: 'home' },
@@ -172,165 +158,4 @@ export const bottomTabs = [
   { id: 'assistant', label: 'DriveMate AI', icon: 'sparkles' },
   { id: 'wallet', label: 'Wallet', icon: 'wallet' },
   { id: 'profile', label: 'Me', icon: 'profile' },
-]
-
-export const chatHistorySessions = [
-  {
-    id: 'h1',
-    title: 'Office route & toll',
-    preview: 'Best Value Route, charging stop, parking reservation…',
-    when: 'Today · 8:02',
-  },
-  {
-    id: 'h2',
-    title: 'VF 8 energy & weekly cost',
-    preview: 'kWh pricing, Volvo comparison, smart route savings…',
-    when: 'Yesterday',
-  },
-  {
-    id: 'h3',
-    title: 'Rewards & trip recap',
-    preview: 'Points balance, 12 trips, time saved…',
-    when: 'Mon',
-  },
-  {
-    id: 'h4',
-    title: 'Traffic & departure',
-    preview: 'Jam forecast 7:50–8:30, leave before 8:10…',
-    when: 'Last week',
-  },
-]
-
-export const scriptedConversation = [
-  {
-    id: 'c1',
-    role: 'driver',
-    content:
-      "Hi, I'm about to head to the People's Committee office. What's the best route today?",
-  },
-  {
-    id: 'c2',
-    role: 'assistant',
-    content:
-      'Quick check—which car are you taking today? Your electric VinFast VF 8, or your Volvo XC60?',
-  },
-  {
-    id: 'c3',
-    role: 'driver',
-    content: "The VinFast VF 8—I'm going electric today.",
-  },
-  {
-    id: 'c4',
-    role: 'assistant',
-    content:
-      "Got it. I'll tune tips for battery use and charging—not petrol—unless you switch vehicles in the app.",
-  },
-  { id: 'c5', role: 'assistant', content: 'I found 3 options:' },
-  {
-    id: 'c6',
-    role: 'assistant',
-    content: 'Best Value Route — 35 mins, 2 toll stations, Toll 30k each.',
-  },
-  {
-    id: 'c7',
-    role: 'assistant',
-    content: 'I recommend Best Value because it saves about 20k in running cost with only a few extra minutes.',
-  },
-  {
-    id: 'c8',
-    role: 'assistant',
-    content:
-      "There are also Fastest and Cheapest lanes if you want to hear them—energy use looks a bit different on each.",
-  },
-  { id: 'c9', role: 'driver', content: 'Just start the best route.' },
-  { id: 'c10', role: 'assistant', content: 'Starting Best Value Route now.' },
-  {
-    id: 'c11',
-    role: 'assistant',
-    content:
-      "There is a Highlands Coffee on the way. Would you like to grab one as usual? I can remind you when you're nearby.",
-  },
-  { id: 'c12', role: 'driver', content: "Yes, remind me when I'm close." },
-  {
-    id: 'c13',
-    role: 'assistant',
-    content: "Sure. I'll remind you when you're near the coffee shop.",
-  },
-  { id: 'c13b', role: 'assistant', content: 'Nearby parking: Nguyen Hue Smart Parking has EV slots now.' },
-  { id: 'c13c', role: 'driver', content: 'Please reserve one slot close to the office.' },
-  {
-    id: 'c13d',
-    role: 'assistant',
-    content: 'Done. One EV slot is reserved from 8:30 to 10:30 AM, about a 6-minute walk to your office.',
-  },
-  { id: 'c14', role: 'driver', content: 'Any traffic I should know about?' },
-  {
-    id: 'c15',
-    role: 'assistant',
-    content:
-      'Forecast for your inbound leg: the highway stretch is expected to jam from about 7:50 to 8:30 AM—going through the middle often adds around 15 minutes.',
-  },
-  {
-    id: 'c16',
-    role: 'assistant',
-    content:
-      'Try to leave before about 8:10 AM to miss the worst queue—you can usually save roughly 12 minutes compared with leaving mid-peak.',
-  },
-  {
-    id: 'c17',
-    role: 'driver',
-    content: 'What should I expect for energy cost on the VF 8 for this commute?',
-  },
-  {
-    id: 'c18',
-    role: 'assistant',
-    content:
-      'Blended home and DC fast pricing is up about 120 VND per kilowatt-hour versus your average last month.',
-  },
-  {
-    id: 'c19',
-    role: 'assistant',
-    content:
-      'For this office run you are looking at roughly 42 to 48k in electricity based on your current charging mix.',
-  },
-  {
-    id: 'c20',
-    role: 'assistant',
-    content:
-      'The Best Value lane avoids the longest high-speed pulls in this heat, which trims a few percent off kWh per kilometer.',
-  },
-  { id: 'c21', role: 'driver', content: 'Do I need to top up my wallet?' },
-  { id: 'c22', role: 'assistant', content: 'Your wallet balance is 120k.' },
-  {
-    id: 'c23',
-    role: 'assistant',
-    content: 'Estimated toll spending for the next few trips is 300k.',
-  },
-  { id: 'c24', role: 'assistant', content: 'I recommend topping up 200k.' },
-  { id: 'c25', role: 'driver', content: 'How many reward points do I have?' },
-  { id: 'c26', role: 'assistant', content: 'You currently have 1,250 points.' },
-  {
-    id: 'c27',
-    role: 'assistant',
-    content: 'You can redeem a coffee voucher or parking discount today.',
-  },
-  { id: 'c28', role: 'driver', content: 'How did I do this week?' },
-  { id: 'c29', role: 'assistant', content: 'This week you completed 12 trips.' },
-  { id: 'c30', role: 'assistant', content: 'You saved 120k using smart routes.' },
-  {
-    id: 'c31',
-    role: 'assistant',
-    content: 'You also reduced travel time by 45 minutes.',
-  },
-  { id: 'c32', role: 'assistant', content: 'Great job!' },
-  { id: 'c33', role: 'driver', content: 'Nice.' },
-  { id: 'c34', role: 'assistant', content: 'Navigation is active. Have a safe trip!' },
-]
-
-export const voiceDemoTrip = {
-  destination: "People's Committee Office",
-  routeLabel: 'Best Value',
-  etaMins: 35,
-  tollSummary: '2 stations • 30k each',
-  bonusLine: 'Coffee + parking reminder on the way',
-}
+];

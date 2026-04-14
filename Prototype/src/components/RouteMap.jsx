@@ -1,8 +1,12 @@
 import React from 'react';
-import { Icon } from './Icon';
-import { routes, voiceDemoTrip, user } from '../data/mockData';
+import { user } from '../data/mockData';
+
+function formatCompactCurrency(value) {
+  return `${Math.round(value / 1000)}k VND`;
+}
 
 export function RouteMap({
+  routes,
   selectedRoute,
   onSelectRoute,
   runningCostLabel,
@@ -10,20 +14,19 @@ export function RouteMap({
   originLabel,
   variant = 'default',
 }) {
-  const dest = destinationLabel ?? voiceDemoTrip.destination;
+  const dest = destinationLabel ?? 'District 1 Office';
   const origin = originLabel ?? user.homeLocation;
   const isRoutesTab = variant === 'routes';
-
-  const formatCurrency = (value) => `${value}k`;
 
   return (
     <div className={`map-vision${isRoutesTab ? ' map-vision-routes' : ''}`}>
       <div className="map-vision-top">
-        <span className="map-live">{isRoutesTab ? '3 routes' : 'Live map'}</span>
+        <span className="map-live">{isRoutesTab ? `${routes.length} routes` : 'Predictive map'}</span>
         <span className="map-area">
-          {origin} → {dest}
+          {origin} to {dest}
         </span>
       </div>
+
       <svg className="map-canvas" viewBox="0 0 320 220" aria-hidden="true">
         <rect x="0" y="0" width="320" height="220" rx="28" fill="#eef4ef" />
         <path d="M28 32C82 52 112 58 170 52C216 48 262 56 298 36" stroke="#dbe8dc" strokeWidth="18" fill="none" />
@@ -41,6 +44,7 @@ export function RouteMap({
           })
           .map((route) => {
             const active = route.id === selectedRoute.id;
+
             return (
               <path
                 key={route.id}
@@ -62,8 +66,8 @@ export function RouteMap({
         <text x="26" y="205" fill="#4b5563" fontSize="11" fontWeight="700">
           Start
         </text>
-        <text x="210" y="34" fill="#111827" fontSize="10" fontWeight="700">
-          Committee
+        <text x="208" y="34" fill="#111827" fontSize="10" fontWeight="700">
+          District 1
         </text>
       </svg>
 
@@ -71,6 +75,7 @@ export function RouteMap({
         <div className="route-map-legend" role="radiogroup" aria-label="Select route to show on map">
           {routes.map((route) => {
             const active = route.id === selectedRoute.id;
+
             return (
               <button
                 key={route.id}
@@ -81,7 +86,7 @@ export function RouteMap({
                 onClick={() => onSelectRoute?.(route.id)}
               >
                 <i className="route-map-legend-swatch" style={{ background: route.color }} aria-hidden="true" />
-                {route.tag}
+                {route.badge}
               </button>
             );
           })}
@@ -104,31 +109,31 @@ export function RouteMap({
             <div>
               <span>Toll</span>
               <strong>
-                {formatCurrency(selectedRoute.tollEach)} each · {formatCurrency(selectedRoute.toll)} total
+                {formatCompactCurrency(selectedRoute.tollEachVnd)} each · {formatCompactCurrency(selectedRoute.tollVnd)} total
               </strong>
             </div>
             <div>
               <span>ETA</span>
-              <strong>{selectedRoute.eta} mins</strong>
+              <strong>{selectedRoute.etaMin} mins</strong>
             </div>
             <div>
-              <span>{runningCostLabel ?? 'Running cost'}</span>
-              <strong>{formatCurrency(selectedRoute.charging)}</strong>
+              <span>{runningCostLabel}</span>
+              <strong>{formatCompactCurrency(selectedRoute.runningCostVnd)}</strong>
             </div>
           </>
         ) : (
           <>
             <div>
               <span>Current pick</span>
-              <strong>{selectedRoute.tag}</strong>
+              <strong>{selectedRoute.badge}</strong>
             </div>
             <div>
               <span>Traffic</span>
-              <strong>Heavy jam forecast</strong>
+              <strong>Rush-hour pressure</strong>
             </div>
             <div>
-              <span>Depart by</span>
-              <strong>08:10 AM</strong>
+              <span>Next service</span>
+              <strong>{selectedRoute.destinationServiceName}</strong>
             </div>
           </>
         )}

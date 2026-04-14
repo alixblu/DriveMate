@@ -74,6 +74,14 @@ export function Icon({ name }) {
           <path {...commonProps} d="M7 11h8M17 7h2l2 2v8a2 2 0 0 1-4 0v-4" />
         </svg>
       );
+    case 'wash':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path {...commonProps} d="M7 15c0-3.5 2.3-6.4 5-9 2.7 2.6 5 5.5 5 9a5 5 0 0 1-10 0Z" />
+          <path {...commonProps} d="M4 20h16" />
+          <path {...commonProps} d="M9 20v-2M15 20v-2" />
+        </svg>
+      );
     case 'coffee':
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true">
