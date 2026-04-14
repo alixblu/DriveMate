@@ -1,0 +1,7 @@
+route_id,poi_id,sequence,eta_min
+R1,1,1,8
+R1,3,2,10
+R1,2,3,12
+R1,4,4,24
+R1,5,5,30
+R1,6,6,35

@@ -38,9 +38,15 @@ Driver: What should I expect for energy cost on the VF 8 for this commute?
 
 AI: Blended home and DC fast pricing is up about 120 VND per kilowatt-hour versus your average last month.
 
-AI: For this office run you are looking at roughly 42 to 48k in electricity—usually a bit less than diesel in the Volvo for the same distance lately.
+AI: For this office run you are looking at roughly 42 to 48k in electricity based on your current charging mix.
 
 AI: The Best Value lane avoids the longest high-speed pulls in this heat, which trims a few percent off kWh per kilometer.
+
+AI: Also, Nguyen Hue Smart Parking near your destination still has EV bays available this morning.
+
+Driver: Reserve one parking spot for me.
+
+AI: Reserved. You now have one EV parking slot from 8:30 to 10:30 AM, around a 6-minute walk to the office.
 
 Driver: Do I need to top up my wallet?
 

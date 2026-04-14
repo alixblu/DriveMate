@@ -1,0 +1,7 @@
+poi_id,name,type,lat,lng,address
+1,Thu Duc Toll Gate,toll_station,10.842900,106.760800,Thu Duc
+2,Petrolimex Station 25,gas_station,10.835500,106.752600,Thu Duc
+3,VETC Charging Thu Duc,charging_station,10.838000,106.754000,Thu Duc
+4,Highlands Coffee Landmark,coffee_shop,10.793400,106.721200,Binh Thanh
+5,Central Toll Plaza,toll_station,10.785900,106.710500,District 1
+6,People's Committee Office,destination,10.775833,106.701389,86 Le Thanh Ton District 1

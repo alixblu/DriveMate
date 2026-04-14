@@ -1,0 +1,4 @@
+route_id,route_name,eta_min,distance_km,toll_stations,total_toll,energy_cost,tag
+R1,Best Value,35,14.2,2,60000,38000,Recommended
+R2,Fastest,31,15.0,3,90000,45000,Fastest
+R3,Cheapest,42,13.8,0,0,50000,Lowest Cost

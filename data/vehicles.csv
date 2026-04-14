@@ -1,0 +1,3 @@
+vehicle_id,user_id,vehicle_name,brand,model,energy_type,is_primary
+1,1,Family Car,Toyota,Corolla Cross,Fuel,true
+2,1,City EV,VinFast,VF e34,Electric,false
