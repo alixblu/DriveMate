@@ -1,16 +1,46 @@
-# React + Vite
+# DriveMate AI Prototype
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+DriveMate AI is a React + Vite hackathon MVP for a VETC-integrated driving assistant.
 
-Currently, two official plugins are available:
+## Core Story
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+The app helps Vietnamese drivers decide:
 
-## React Compiler
+- when to leave
+- which route to take
+- when to refuel
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+The hero workflow is:
 
-## Expanding the ESLint configuration
+`Fuel rises tomorrow -> warn tonight -> open the Daily Decision Card -> choose the best-value route -> see expected weekly savings`
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Commands
+
+```bash
+npm install
+npm run dev
+npm run dev:stack
+npm run lint
+npm run build
+```
+
+`npm run dev` now starts the frontend on `http://127.0.0.1:4173` using Vite's native config loader for better Windows reliability.
+
+`npm run dev:stack` starts both the frontend and the TimesFM sidecar. The sidecar boots on `http://127.0.0.1:8008`, and the app will automatically promote itself from seeded startup data to live TimesFM forecasts once the model finishes warming.
+
+## Demo Links
+
+The app supports query params for pitch-friendly deep links:
+
+- `/?tab=home&scenario=fuel-hike`
+- `/?tab=routes&scenario=fuel-hike`
+- `/?tab=assistant&scenario=fuel-hike`
+- `/?tab=wallet&scenario=fuel-hike`
+- `/?tab=home&scenario=fallback`
+
+## Repo Assets
+
+- `docs/PITCH.md` - pitch framing
+- `docs/DEMO_SCRIPT.md` - live demo walkthrough
+- `docs/FINAL_CHECKLIST.md` - launch checklist
+- `scripts/capture-demo-assets.ps1` - helper to capture backup screenshots with Edge/Chrome headless

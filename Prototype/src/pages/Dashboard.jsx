@@ -1,17 +1,22 @@
 import React from 'react';
 import { Icon } from '../components/Icon';
 import { RouteMap } from '../components/RouteMap';
-import { services, articleCards, commute } from '../data/mockData';
+import { services } from '../data/mockData';
 
-export function Dashboard({ 
-  activeVehicle, 
-  walletBalance, 
-  selectedRoute, 
-  setActiveTab, 
-  runningCostLabel,
+export function Dashboard({
+  snapshot,
+  scenarioCatalog,
+  scenarioId,
+  setScenarioId,
+  activeVehicle,
+  walletBalance,
+  selectedRoute,
+  setActiveTab,
   formatCurrency,
   onOpenNotifications,
 }) {
+  const { tripPrediction, primaryAction, secondaryActions, weeklyRecap } = snapshot;
+
   return (
     <>
       <section className="hero-banner">
@@ -32,10 +37,10 @@ export function Dashboard({
 
         <div className="hero-copy">
           <p className="brand-line">DriveMate AI x VETC</p>
-          <h1>Smarter trips inside VETC</h1>
+          <h1>Predict the trip. Activate the TASCO service.</h1>
           <p>
-            AI mobility companion inside the VETC experience with route intelligence, smart wallet, and trip
-            insights.
+            DriveMate turns VETC into a daily habit by predicting where you are going, which route makes sense,
+            and which TASCO service you need next.
           </p>
         </div>
 
@@ -45,18 +50,116 @@ export function Dashboard({
           <div className="hero-car-label">
             <span className="hero-car-name">{activeVehicle.shortName}</span>
             <span className={`hero-car-power ${activeVehicle.powertrain === 'ev' ? 'is-ev' : ''}`}>
-              {activeVehicle.powertrain === 'ev' ? 'Electric' : 'Petrol'}
+              {activeVehicle.vehicleMode}
             </span>
           </div>
         </div>
       </section>
 
       <main className="mobile-content">
+        <section className="commute-card ai-card predictive-action-card">
+          <div className="card-header">
+            <div>
+              <p className="section-label green">Predictive action</p>
+              <h2>{tripPrediction.destination}</h2>
+            </div>
+            <span className="confidence-badge">{tripPrediction.confidencePct}% likely</span>
+          </div>
+
+          <div className="assistant-scenario-toggle dashboard-scenario-toggle">
+            <span>Demo scenarios</span>
+            <div className="assistant-scenario-buttons">
+              {scenarioCatalog.map((scenario) => (
+                <button
+                  key={scenario.id}
+                  type="button"
+                  className={`assistant-scenario-btn ${scenario.id === scenarioId ? 'active' : ''}`}
+                  onClick={() => setScenarioId(scenario.id)}
+                >
+                  {scenario.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <p className="body-copy predictive-body-copy">
+            Leave at <strong>{tripPrediction.leaveAt}</strong>, take <strong>{selectedRoute.badge}</strong>, and let
+            DriveMate turn the commute into a concrete TASCO plan.
+          </p>
+
+          <div className="metric-row">
+            <div className="mini-metric">
+              <span>Total trip</span>
+              <strong>{formatCurrency(tripPrediction.totalCostVnd)}</strong>
+            </div>
+            <div className="mini-metric">
+              <span>Toll</span>
+              <strong>{formatCurrency(tripPrediction.tollVnd)}</strong>
+            </div>
+            <div className="mini-metric">
+              <span>{snapshot.runningCostLabel}</span>
+              <strong>{formatCurrency(tripPrediction.runningCostVnd)}</strong>
+            </div>
+          </div>
+
+          <div className="predictive-primary-action surface-card">
+            <div>
+              <p className="section-label green">{primaryAction.timing}</p>
+              <h3>{primaryAction.title}</h3>
+              <p>{primaryAction.reason}</p>
+            </div>
+            <button
+              type="button"
+              className="primary-action"
+              onClick={() => setActiveTab(primaryAction.ctaTab)}
+            >
+              {primaryAction.ctaLabel}
+            </button>
+          </div>
+
+          <RouteMap
+            routes={snapshot.routeOptions}
+            selectedRoute={selectedRoute}
+            runningCostLabel={snapshot.runningCostLabel}
+            destinationLabel={tripPrediction.destination}
+          />
+
+          <div className="predictive-secondary-list">
+            {secondaryActions.map((action) => (
+              <button
+                key={`${action.serviceType}-${action.title}`}
+                type="button"
+                className="predictive-secondary-item"
+                onClick={() => setActiveTab(action.ctaTab)}
+              >
+                <div>
+                  <span>{action.timing}</span>
+                  <strong>{action.title}</strong>
+                </div>
+                <small>{action.serviceType.replace('_', ' ')}</small>
+              </button>
+            ))}
+          </div>
+
+          <div className="button-row">
+            <button type="button" className="primary-action" onClick={() => setActiveTab('routes')}>
+              Compare 3 routes
+            </button>
+            <button
+              type="button"
+              className="secondary-action"
+              onClick={() => setActiveTab('assistant')}
+            >
+              Ask DriveMate
+            </button>
+          </div>
+        </section>
+
         <section className="service-card surface-card lifted">
           <div className="service-card-header">
             <div>
-              <p className="section-label">VETC services</p>
-              <h2>My services</h2>
+              <p className="section-label">TASCO services</p>
+              <h2>Use prediction to trigger action</h2>
             </div>
             <div className="wallet-pill">
               <Icon name="wallet" />
@@ -82,84 +185,22 @@ export function Dashboard({
           </div>
         </section>
 
-        <section className="commute-card ai-card">
-          <div className="card-header">
-            <div>
-              <p className="section-label green">AI commute</p>
-              <h2>{commute.destination} in {commute.eta} mins</h2>
-            </div>
-            <span className="confidence-badge">{commute.confidence}% likely</span>
-          </div>
-
-          <p className="body-copy">
-            Leave at {commute.departureTime} and DriveMate AI recommends the balanced route for better value.
-          </p>
-
-          <div className="metric-row">
-            <div className="mini-metric">
-              <span>Traffic</span>
-              <strong>{commute.traffic}</strong>
-            </div>
-            <div className="mini-metric">
-              <span>Toll</span>
-              <strong>{formatCurrency(commute.toll)}</strong>
-            </div>
-            <div className="mini-metric">
-              <span>{runningCostLabel.replace(' est.', '')}</span>
-              <strong>{formatCurrency(commute.charging)}</strong>
-            </div>
-          </div>
-
-          <RouteMap selectedRoute={selectedRoute} />
-
-          <div className="button-row">
-            <button type="button" className="primary-action" onClick={() => setActiveTab('routes')}>
-              View AI route
-            </button>
-            <button
-              type="button"
-              className="secondary-action"
-              onClick={() => setActiveTab('assistant')}
-            >
-              Ask DriveMate
-            </button>
-          </div>
-        </section>
-
         <section className="smart-card surface-card">
           <div className="smart-copy">
-            <p className="section-label green">Smart alert</p>
-            <h2>{activeVehicle.shortName}: charging rates up slightly</h2>
+            <p className="section-label green">Weekly recap</p>
+            <h2>{weeklyRecap.moneySavedVnd.toLocaleString('vi-VN')} VND saved this week</h2>
             <p>
-              Blended kWh is higher this week. The balanced lane trims highway drag—worth it when you are in the
-              electric car; use Garage to compare charging behavior across your saved EV profiles.
+              {weeklyRecap.summaryText} Users stay reliant because the same prediction links toll, parking,
+              charging, or car wash into one daily decision.
             </p>
           </div>
           <button
             type="button"
             className="link-action"
-            onClick={() => setActiveTab('assistant')}
+            onClick={() => setActiveTab('profile')}
           >
-            View advice
+            View recap
           </button>
-        </section>
-
-        <section className="article-section">
-          <div className="section-heading">
-            <h2>More insights</h2>
-            <button type="button" className="text-button" onClick={() => setActiveTab('profile')}>
-              Sort
-            </button>
-          </div>
-
-          <div className="article-grid">
-            {articleCards.map((article) => (
-              <article key={article.id} className={`article-card ${article.theme}`}>
-                <span>{article.kicker}</span>
-                <h3>{article.title}</h3>
-              </article>
-            ))}
-          </div>
         </section>
       </main>
     </>

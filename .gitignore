@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+timesfm_service/.venv/
+timesfm_service/.hf-cache/
+timesfm_service/.hf-home/
+timesfm_service/.logs/
+vite_native.stdout.log
+vite_native.stderr.log

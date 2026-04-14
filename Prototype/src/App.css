@@ -2530,3 +2530,129 @@
   background: #18b46b;
   border-radius: 999px;
 }
+
+.predictive-action-card {
+  gap: 18px;
+}
+
+.predictive-body-copy {
+  margin: 0;
+  color: #475467;
+  line-height: 1.55;
+}
+
+.dashboard-scenario-toggle {
+  margin-top: 6px;
+}
+
+.predictive-primary-action {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid rgba(24, 180, 107, 0.16);
+  background: linear-gradient(135deg, rgba(24, 180, 107, 0.08), rgba(15, 23, 42, 0.02));
+}
+
+.predictive-primary-action h3,
+.assistant-explore-title {
+  margin: 4px 0 8px;
+  color: #0f172a;
+}
+
+.predictive-primary-action p {
+  margin: 0;
+  color: #526071;
+  line-height: 1.5;
+}
+
+.predictive-secondary-list {
+  display: grid;
+  gap: 10px;
+}
+
+.predictive-secondary-item {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 16px;
+  background: #fff;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.predictive-secondary-item span,
+.route-choice-foot small,
+.voice-trip-bonus {
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.predictive-secondary-item strong,
+.route-choice-foot .route-badge {
+  color: #0f172a;
+}
+
+.predictive-secondary-item small {
+  border-radius: 999px;
+  background: #f3f5f3;
+  padding: 6px 9px;
+  color: #475467;
+  text-transform: capitalize;
+}
+
+.route-choice-card {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: start;
+}
+
+.route-choice-card > div:first-child {
+  min-width: 0;
+}
+
+.route-choice-foot {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.route-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.route-badge.recommended {
+  background: rgba(24, 180, 107, 0.12);
+  color: #15803d;
+}
+
+.assistant-quick-prompts {
+  display: grid;
+  gap: 12px;
+}
+
+.voice-trip-bonus {
+  margin: 12px 0 0;
+  line-height: 1.4;
+}
+
+@media (max-width: 420px) {
+  .route-choice-card {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .predictive-primary-action {
+    padding: 14px;
+  }
+}

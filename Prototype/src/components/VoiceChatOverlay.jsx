@@ -1,6 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Icon } from './Icon';
-import { voiceDemoTrip, commute, scriptedConversation, promptResponses } from '../data/mockData';
 
 export function VoiceChatOverlay({
   voiceChatOpen,
@@ -9,48 +8,25 @@ export function VoiceChatOverlay({
   voiceError,
   startLiveRecognition,
   stopRecognition,
-  showVoiceTripContext,
-  showVoiceDestination,
-  showVoiceRouteBlock,
-  showVoiceNextAction,
-  showVoiceBonus,
-  streamProgress,
+  voiceContext,
+  quickPrompts,
+  messages,
+  onAsk,
+  onReadAloud,
 }) {
   const [draftMessage, setDraftMessage] = useState('');
-  const [manualMessages, setManualMessages] = useState([]);
   const threadRef = useRef(null);
-
-  const streamedMessages = useMemo(
-    () => scriptedConversation.slice(0, streamProgress.mi + 1),
-    [streamProgress.mi]
-  );
-
-  const allMessages = useMemo(
-    () => [...streamedMessages, ...manualMessages],
-    [streamedMessages, manualMessages]
-  );
-
-  useEffect(() => {
-    if (!voiceChatOpen) return;
-    setDraftMessage('');
-    setManualMessages([]);
-  }, [voiceChatOpen]);
 
   useEffect(() => {
     if (!threadRef.current) return;
     threadRef.current.scrollTop = threadRef.current.scrollHeight;
-  }, [streamProgress.mi, streamProgress.wc, manualMessages]);
+  }, [messages]);
 
   function sendTypedMessage(event) {
     event.preventDefault();
     const normalized = draftMessage.trim();
     if (!normalized) return;
-    const response = promptResponses[normalized] ?? 'I can help with routing, wallet, and energy insights.';
-    setManualMessages((curr) => [
-      ...curr,
-      { id: `m-u-${Date.now()}`, role: 'driver', content: normalized },
-      { id: `m-a-${Date.now() + 1}`, role: 'assistant', content: response },
-    ]);
+    onAsk(normalized);
     setDraftMessage('');
   }
 
@@ -73,7 +49,7 @@ export function VoiceChatOverlay({
             </span>
             <div>
               <p className="section-label green">DriveMate AI</p>
-              <h2 id="voice-chat-title">Voice chat</h2>
+              <h2 id="voice-chat-title">Voice companion</h2>
             </div>
           </div>
           <div className="voice-chat-top-actions">
@@ -87,7 +63,7 @@ export function VoiceChatOverlay({
               }
               aria-label="Speak to the assistant"
             >
-              <Icon name="sparkles" />
+              <Icon name="mic" />
             </button>
             <button type="button" className="voice-chat-close" onClick={closeVoiceChat} aria-label="Close">
               <Icon name="close" />
@@ -97,49 +73,58 @@ export function VoiceChatOverlay({
 
         <div className="voice-chat-body">
           <div className="voice-chat-scroll">
-            {showVoiceTripContext ? (
-              <section className="voice-trip-context surface-card" aria-label="Trip context">
-                <h3 className="voice-trip-context-title">Trip context</h3>
-                <div className="voice-trip-facts">
-                  {showVoiceDestination ? (
-                    <div className="voice-trip-fact">
-                      <span className="voice-trip-fact-label">Destination</span>
-                      <span className="voice-trip-fact-value">{voiceDemoTrip.destination}</span>
-                    </div>
-                  ) : null}
-                  {showVoiceRouteBlock ? (
-                    <>
-                      <div className="voice-trip-fact">
-                        <span className="voice-trip-fact-label">Route Selected</span>
-                        <span className="voice-trip-fact-value">{voiceDemoTrip.routeLabel}</span>
-                      </div>
-                      <div className="voice-trip-fact">
-                        <span className="voice-trip-fact-label">ETA</span>
-                        <span className="voice-trip-fact-value">{voiceDemoTrip.etaMins} mins</span>
-                      </div>
-                      <div className="voice-trip-fact">
-                        <span className="voice-trip-fact-label">Toll</span>
-                        <span className="voice-trip-fact-value">{voiceDemoTrip.tollSummary}</span>
-                      </div>
-                    </>
-                  ) : null}
-                  {showVoiceNextAction ? (
-                    <div className="voice-trip-fact">
-                      <span className="voice-trip-fact-label">Next Action</span>
-                      <span className="voice-trip-fact-value">
-                        Leave before {commute.departureTime}
-                      </span>
-                    </div>
-                  ) : null}
-                  {showVoiceBonus ? (
-                    <div className="voice-trip-fact voice-trip-fact-bonus">
-                      <span className="voice-trip-fact-label">Bonus</span>
-                      <span className="voice-trip-fact-value">{voiceDemoTrip.bonusLine}</span>
-                    </div>
-                  ) : null}
+            <section className="voice-trip-context surface-card" aria-label="Trip context">
+              <h3 className="voice-trip-context-title">Current trip</h3>
+              <div className="voice-trip-facts">
+                <div className="voice-trip-fact">
+                  <span className="voice-trip-fact-label">Destination</span>
+                  <span className="voice-trip-fact-value">{voiceContext.destination}</span>
                 </div>
-              </section>
-            ) : null}
+                <div className="voice-trip-fact">
+                  <span className="voice-trip-fact-label">Selected route</span>
+                  <span className="voice-trip-fact-value">{voiceContext.routeLabel}</span>
+                </div>
+                <div className="voice-trip-fact">
+                  <span className="voice-trip-fact-label">ETA</span>
+                  <span className="voice-trip-fact-value">{voiceContext.etaMins} mins</span>
+                </div>
+                <div className="voice-trip-fact">
+                  <span className="voice-trip-fact-label">Toll</span>
+                  <span className="voice-trip-fact-value">{voiceContext.tollSummary}</span>
+                </div>
+                <div className="voice-trip-fact">
+                  <span className="voice-trip-fact-label">Leave at</span>
+                  <span className="voice-trip-fact-value">{voiceContext.leaveAt}</span>
+                </div>
+                <div className="voice-trip-fact voice-trip-fact-bonus">
+                  <span className="voice-trip-fact-label">Next action</span>
+                  <span className="voice-trip-fact-value">{voiceContext.nextAction}</span>
+                </div>
+              </div>
+              <p className="voice-trip-bonus">{voiceContext.bonusLine}</p>
+            </section>
+
+            <section className="surface-card assistant-quick-prompts">
+              <div className="assistant-actions-head">
+                <p className="section-label">Quick prompts</p>
+                <button type="button" className="text-button" onClick={onReadAloud}>
+                  Read summary
+                </button>
+              </div>
+              <div className="assistant-action-grid">
+                {quickPrompts.map((prompt) => (
+                  <button
+                    key={prompt}
+                    type="button"
+                    className="chip-button assistant-action-chip"
+                    onClick={() => onAsk(prompt)}
+                  >
+                    <Icon name="sparkles" />
+                    <span>{prompt}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
 
             {voiceError ? <p className="voice-error assistant-voice-error">{voiceError}</p> : null}
 
@@ -151,26 +136,17 @@ export function VoiceChatOverlay({
               </div>
 
               <div ref={threadRef} className="conversation-thread assistant-demo-thread">
-                {allMessages.map((msg, idx) => {
-                  const isStreamed = idx < streamedMessages.length;
-                  const isLastStreamed = isStreamed && idx === streamProgress.mi;
-                  const words = msg.content.trim().split(/\s+/).filter(Boolean);
-                  const displayContent = isLastStreamed ? words.slice(0, streamProgress.wc).join(' ') : msg.content;
-
-                  if (isLastStreamed && streamProgress.wc === 0) return null;
-
-                  return (
-                    <div
-                      key={msg.id}
-                      id={`conv-msg-${msg.id}`}
-                      className={`message-row ${msg.role === 'assistant' ? 'assistant' : 'driver'}`}
-                    >
-                      <div className={`message-bubble ${msg.role === 'assistant' ? 'assistant' : 'driver'}`}>
-                        {displayContent}
-                      </div>
+                {messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`message-row ${message.role === 'assistant' ? 'assistant' : 'driver'}`}
+                  >
+                    <div className={`message-bubble ${message.role === 'assistant' ? 'assistant' : 'driver'}`}>
+                      {message.title ? <strong>{message.title}. </strong> : null}
+                      {message.content}
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
             </section>
           </div>
@@ -181,7 +157,7 @@ export function VoiceChatOverlay({
                 type="text"
                 value={draftMessage}
                 onChange={(event) => setDraftMessage(event.target.value)}
-                placeholder="Type to ask DriveMate AI..."
+                placeholder="Ask about route, wallet, parking, charging, or car wash"
                 aria-label="Message DriveMate AI"
               />
               <div className="composer-action-group">
