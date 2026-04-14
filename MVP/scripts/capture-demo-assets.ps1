@@ -1,6 +1,6 @@
 param(
   [string]$BaseUrl = "http://127.0.0.1:4173",
-  [string]$OutputDir = "c:\Users\DELL\yeti-login\DriveMate\Prototype\docs\assets"
+  [string]$OutputDir = "c:\Users\DELL\yeti-login\DriveMate\MVP\docs\assets"
 )
 
 $browserCandidates = @(

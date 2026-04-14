@@ -1,4 +1,4 @@
-# DriveMate AI Prototype
+# DriveMate AI MVP
 
 DriveMate AI is a React + Vite hackathon MVP for a VETC-integrated driving assistant.
 

@@ -11,7 +11,7 @@
 ## Engineering
 - [x] `npm run lint`
 - [x] `npm run build`
-- [x] Local dependencies installed inside `Prototype`
+- [x] Local dependencies installed inside `MVP`
 - [x] Local PostCSS config no longer inherits unrelated Tailwind setup
 - [x] URL query params support `tab` and `scenario` for demo links
 

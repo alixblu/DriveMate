@@ -10,7 +10,7 @@ Instead of competing with navigation apps on ETA alone, DriveMate optimizes for 
 
 ## Project Layout
 
-- `Prototype/` - React + Vite MVP
+- `MVP/` - React + Vite MVP
 - `build_spec.txt` - original product build spec
 - `convo.txt` - early voice demo copy
 
@@ -23,17 +23,17 @@ npm run dev
 That single command now starts both:
 
 - the TimesFM FastAPI sidecar on `http://127.0.0.1:8008`
-- the Vite frontend in `Prototype/`
+- the Vite frontend in `MVP/`
 
 If you want to start it from inside the frontend folder instead:
 
 ```bash
-cd Prototype
+cd MVP
 npm run dev:stack
 ```
 
 ## Docs
 
-- `Prototype/docs/PITCH.md`
-- `Prototype/docs/DEMO_SCRIPT.md`
-- `Prototype/docs/FINAL_CHECKLIST.md`
+- `MVP/docs/PITCH.md`
+- `MVP/docs/DEMO_SCRIPT.md`
+- `MVP/docs/FINAL_CHECKLIST.md`
