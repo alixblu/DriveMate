@@ -16,39 +16,45 @@ Instead of competing with navigation apps on ETA alone, DriveMate optimizes for 
 - `build_spec.txt` - original product build spec
 - `convo.txt` - early voice demo copy
 
-## Run (Full stack)
+## Run locally (dev mode)
 
-```bash
-npm run dev
-```
+Open **3 separate terminals** in repo root (`D:\GitRepo\DriveMate\`).
 
-That single command now starts both:
-
-- the TimesFM FastAPI sidecar on `http://127.0.0.1:8008`
-- the Vite frontend in `MVP/`
-
-If you want to start it from inside the frontend folder instead:
-
-```bash
-cd MVP
-npm run dev:stack
-```
-
-## Python setup (TimesFM sidecar)
-
-If this is your first run, create a virtual environment and install the sidecar dependencies:
+### 1) TimesFM sidecar
 
 ```powershell
 python -m venv .venv
 .venv\Scripts\python -m pip install --upgrade pip
 .venv\Scripts\python -m pip install -r timesfm_service\requirements.txt
+.venv\Scripts\python -m uvicorn timesfm_service.app:app --host 127.0.0.1 --port 8008
 ```
 
-Then copy env file and set your Hugging Face key:
+First run downloads the TimesFM model (~1.5 GB), which can take 5-15 minutes.
+
+### 2) Qwen assistant service
+
+```powershell
+.venv\Scripts\python -m pip install -r assistant_service\requirements.txt
+.venv\Scripts\python -m uvicorn assistant_service.app:app --host 127.0.0.1 --port 8009
+```
+
+### 3) React frontend
+
+```powershell
+cd MVP
+npm install
+npm run dev
+```
+
+Frontend runs at `http://127.0.0.1:4173`.
+
+## Environment setup
 
 ```powershell
 copy .env.example .env
-# edit .env and set HUGGINGFACE_API_KEY
+# edit .env and set:
+# HUGGINGFACE_API_KEY=...
+# DASHSCOPE_API_KEY=...
 ```
 
 ## Docs

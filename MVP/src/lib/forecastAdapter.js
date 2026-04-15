@@ -337,6 +337,38 @@ function summarizeLiveStatus(fuelTrend, commuteWindow) {
   }
 }
 
+// Maps predictionEngine scenario IDs → timesfm_service scenario IDs
+function toTimesfmScenarioId(predictionScenarioId) {
+  if (predictionScenarioId === 'fallback-demo') return 'fallback'
+  if (predictionScenarioId === 'rainy-office') return 'fuel-hike'
+  return 'fuel-hike' // weekday-office and all others → fuel-hike
+}
+
+export async function loadLiveForecast(predictionScenarioId) {
+  const today = new Date().toISOString().slice(0, 10)
+  const timesfmId = toTimesfmScenarioId(predictionScenarioId)
+  const userProfile = { id: 'mai-tran' }
+  const area = 'Ho Chi Minh City'
+
+  const [fuelTrend, commuteWindow] = await Promise.all([
+    ForecastAdapter.getFuelTrend(today, area, timesfmId),
+    ForecastAdapter.getCommuteWindow(userProfile, today, timesfmId),
+  ])
+  return { fuelTrend, commuteWindow }
+}
+
+export async function pollTimesFMHealth() {
+  try {
+    const res = await fetch(`${FORECAST_SERVICE_URL}/health`, {
+      signal: AbortSignal.timeout(5000),
+    })
+    if (!res.ok) return { status: 'degraded', modelLoaded: false }
+    return res.json()
+  } catch {
+    return { status: 'unreachable', modelLoaded: false }
+  }
+}
+
 export const ForecastAdapter = {
   getScenarioMeta(scenarioId = DEFAULT_SCENARIO_ID) {
     return (

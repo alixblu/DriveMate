@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '../components/Icon';
 
 function buildActionPanel(action, snapshot, formatCurrency) {
@@ -62,12 +62,33 @@ function buildActionPanel(action, snapshot, formatCurrency) {
   }
 }
 
+const TRAFFIC_SCENARIOS = [
+  { id: 'normal',   label: 'Normal',   delta: 0 },
+  { id: 'rain',     label: 'Rain',     delta: 5 },
+  { id: 'incident', label: 'Incident', delta: 11 },
+];
+
 export function AssistantPage({
   snapshot,
   setActiveTab,
   setSelectedRouteId,
   formatCurrency,
+  messages = [],
+  onAsk,
+  qwenLoading = false,
 }) {
+  const [trafficId, setTrafficId] = useState('normal');
+  const [draft, setDraft] = useState('');
+  const threadRef = useRef(null);
+  const activeTraffic = TRAFFIC_SCENARIOS.find((t) => t.id === trafficId) ?? TRAFFIC_SCENARIOS[0];
+  const liveEta = snapshot.tripPrediction.etaMin + activeTraffic.delta;
+
+  useEffect(() => {
+    if (threadRef.current) {
+      threadRef.current.scrollTop = threadRef.current.scrollHeight;
+    }
+  }, [messages]);
+
   const actionOptions = useMemo(
     () => [
       snapshot.primaryAction,
@@ -88,10 +109,10 @@ export function AssistantPage({
   const currentPanel =
     activeAction.serviceType === 'leave_time'
       ? {
-          title: activeAction.title,
+          title: `${activeAction.title}${activeTraffic.delta > 0 ? ` (${activeTraffic.label}: +${activeTraffic.delta} min)` : ''}`,
           lines: [
-            snapshot.scenario.trafficBand,
-            `Current route ETA: ${snapshot.selectedRoute.etaMin} min`,
+            snapshot.tripPrediction.trafficBand,
+            `Current route ETA: ${liveEta} min`,
             `Leaving at ${snapshot.tripPrediction.leaveAt} protects about ${snapshot.scenario.leaveEarlyMinutesSaved} minutes.`,
           ],
           cta: activeAction.ctaLabel,
@@ -121,7 +142,9 @@ export function AssistantPage({
         <div className="assistant-status-row">
           <div>
             <span>ETA</span>
-            <strong>{snapshot.tripPrediction.etaMin} min</strong>
+            <strong>
+              {liveEta} min{activeTraffic.delta > 0 ? ` (+${activeTraffic.delta})` : ''}
+            </strong>
           </div>
           <div>
             <span>Leave at</span>
@@ -131,6 +154,22 @@ export function AssistantPage({
             <span>Total</span>
             <strong>{formatCurrency(snapshot.tripPrediction.totalCostVnd)}</strong>
           </div>
+        </div>
+        <div className="assistant-scenario-toggle" style={{ marginTop: 10 }}>
+          <span>Traffic condition</span>
+          <div className="assistant-scenario-buttons">
+            {TRAFFIC_SCENARIOS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                className={`assistant-scenario-btn${trafficId === t.id ? ' active' : ''}`}
+                onClick={() => setTrafficId(t.id)}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <p className="traffic-note">{snapshot.tripPrediction.trafficBand}</p>
         </div>
       </section>
 
@@ -268,6 +307,73 @@ export function AssistantPage({
         <button type="button" className="secondary-action small" onClick={() => setActiveTab('home')}>
           Back to predictive card
         </button>
+      </section>
+
+      <section className="surface-card assistant-feature-card">
+        <div className="assistant-feature-head">
+          <p className="section-label">DriveMate AI Chat</p>
+          <strong>Ask about route, fuel, wallet, or departure time</strong>
+        </div>
+        <div className="assistant-action-grid">
+          {snapshot.quickPrompts.map((q) => (
+            <button
+              key={q}
+              type="button"
+              className="chip-button assistant-action-chip"
+              onClick={() => setDraft(q)}
+            >
+              <Icon name="sparkles" />
+              <span>{q}</span>
+            </button>
+          ))}
+        </div>
+        <div ref={threadRef} className="conversation-thread" style={{ marginTop: 12 }}>
+          {messages.map((m) => (
+            <div key={m.id} className={`message-row ${m.role === 'assistant' ? 'assistant' : 'driver'}`}>
+              <div className={`message-bubble ${m.role === 'assistant' ? 'assistant' : 'driver'}`}>
+                {m.title ? <strong>{m.title}. </strong> : null}
+                {m.content}
+              </div>
+            </div>
+          ))}
+          {qwenLoading && (
+            <div className="message-row assistant">
+              <div className="message-bubble assistant">
+                <em className="typing-indicator">DriveMate is thinking...</em>
+              </div>
+            </div>
+          )}
+        </div>
+        <form
+          className="chat-composer chat-composer-row"
+          style={{ marginTop: 10 }}
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (draft.trim() && !qwenLoading) {
+              onAsk?.(draft);
+              setDraft('');
+            }
+          }}
+        >
+          <input
+            type="text"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="Ask about route, wallet, fuel..."
+            aria-label="Message DriveMate AI"
+            disabled={qwenLoading}
+          />
+          <div className="composer-action-group">
+            <button
+              type="submit"
+              className="composer-icon-btn composer-send-btn"
+              disabled={qwenLoading || !draft.trim()}
+              aria-label="Send"
+            >
+              <Icon name="send" />
+            </button>
+          </div>
+        </form>
       </section>
     </main>
   );

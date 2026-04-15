@@ -431,8 +431,18 @@ export function createDriveMateSnapshot({
   walletBalance = 118000,
   rewardPoints = 1260,
   tripCompleted = false,
+  fuelTrend = null,
+  commuteWindow = null,
 } = {}) {
   const scenario = getScenario(scenarioId);
+
+  // Merge live TimesFM data into the snapshot — fall back to scenario seeds when null
+  const liveDepartureTime = commuteWindow?.bestDepartureTime ?? null;
+  const liveConfidencePct = commuteWindow?.confidencePct ?? scenario.confidencePct;
+  const liveEtaRange = commuteWindow?.etaRangeMin ?? null;
+  const liveTrafficBand = commuteWindow?.trafficBand ?? scenario.trafficBand;
+  const liveSource = commuteWindow?.source ?? 'seeded-scenario';
+  const liveFuelDelta = fuelTrend?.deltaVnd ?? null;
   const vehicle = getVehicle(vehicleId);
   const runningCostLabel = vehicle.powertrain === 'ev' ? 'Charge' : 'Fuel';
   const { routeOptions, recommendedRouteId } = buildRouteOptions(vehicle, scenario);
@@ -463,9 +473,12 @@ export function createDriveMateSnapshot({
   const weeklyRecap = buildWeeklyRecap(scenario, vehicle, primaryAction);
   const tripPrediction = {
     destination: scenario.destination,
-    confidencePct: scenario.confidencePct,
-    leaveAt: scenario.leaveAt,
+    confidencePct: liveConfidencePct,
+    leaveAt: liveDepartureTime ?? scenario.leaveAt,
     etaMin: selectedRoute.etaMin,
+    etaRangeMin: liveEtaRange,
+    trafficBand: liveTrafficBand,
+    forecastSource: liveSource,
     routeId: selectedRoute.id,
     tollVnd: selectedRoute.tollVnd,
     runningCostVnd: selectedRoute.runningCostVnd,
@@ -526,11 +539,22 @@ export function createDriveMateSnapshot({
       bonusLine: `${weeklyRecap.moneySavedVnd.toLocaleString('vi-VN')} VND weekly savings · ${weeklyRecap.trafficMinutesSaved} min saved`,
     },
     scenarioStatus: {
-      label: scenario.fallbackMode ? 'Demo-safe fallback' : 'Predictive mock data',
+      label: scenario.fallbackMode ? 'Demo-safe fallback'
+        : liveSource === 'timesfm-live' ? 'TimesFM live'
+        : 'Predictive data',
       detail: scenario.story,
-      confidencePct: clampPercent(scenario.confidencePct),
+      confidencePct: clampPercent(liveConfidencePct),
       fallbackMode: scenario.fallbackMode,
+      forecastSource: liveSource,
     },
+    fuelAlert: liveFuelDelta !== null && liveFuelDelta > 200
+      ? {
+          active: true,
+          deltaVnd: liveFuelDelta,
+          direction: fuelTrend.trendDirection,
+          weeklyImpactVnd: fuelTrend.estimatedWeeklyImpactVnd ?? 0,
+        }
+      : { active: false },
     tripCompleted,
   };
 }

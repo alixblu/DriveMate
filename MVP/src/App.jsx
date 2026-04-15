@@ -18,6 +18,7 @@ import {
   createDriveMateSnapshot,
   scenarioCatalog,
 } from './lib/predictionEngine';
+import { loadLiveForecast, pollTimesFMHealth } from './lib/forecastAdapter';
 
 function pickInitialTab() {
   if (typeof window === 'undefined') {
@@ -94,6 +95,10 @@ export default function App() {
   const [voiceError, setVoiceError] = useState('');
   const [voiceChatOpen, setVoiceChatOpen] = useState(false);
   const [availableVoices, setAvailableVoices] = useState([]);
+  const [forecastData, setForecastData] = useState({ fuelTrend: null, commuteWindow: null });
+  const [forecastLoading, setForecastLoading] = useState(true);
+  const [timesfmReady, setTimesfmReady] = useState(false);
+  const [qwenLoading, setQwenLoading] = useState(false);
 
   const recognitionRef = useRef(null);
   const speechUtteranceRef = useRef(null);
@@ -108,8 +113,11 @@ export default function App() {
         walletBalance,
         rewardPoints,
         tripCompleted,
+        fuelTrend: forecastData.fuelTrend,
+        commuteWindow: forecastData.commuteWindow,
       }),
-    [activeVehicleId, rewardPoints, scenarioId, selectedRouteId, tripCompleted, walletBalance],
+    [activeVehicleId, rewardPoints, scenarioId, selectedRouteId, tripCompleted, walletBalance,
+     forecastData.fuelTrend, forecastData.commuteWindow],
   );
 
   const activeVehicle =
@@ -153,6 +161,31 @@ export default function App() {
       window.speechSynthesis.removeEventListener('voiceschanged', loadVoices);
     };
   }, [hasSpeechSupport]);
+
+  // Poll TimesFM /health every 30s; promote to live forecasts once model is ready
+  useEffect(() => {
+    let cancelled = false;
+    async function check() {
+      const health = await pollTimesFMHealth();
+      if (!cancelled && health.modelLoaded) setTimesfmReady(true);
+    }
+    check();
+    const id = window.setInterval(check, 30_000);
+    return () => { cancelled = true; window.clearInterval(id); };
+  }, []);
+
+  // Load live forecasts when scenario changes or TimesFM becomes ready
+  useEffect(() => {
+    let cancelled = false;
+    setForecastLoading(true);
+    loadLiveForecast(scenarioId).then(({ fuelTrend, commuteWindow }) => {
+      if (!cancelled) {
+        setForecastData({ fuelTrend, commuteWindow });
+        setForecastLoading(false);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [scenarioId, timesfmReady]);
 
   function stopSpeechPlayback() {
     if (!hasSpeechSupport) return;
@@ -223,6 +256,65 @@ export default function App() {
     setActiveTab('assistant');
 
     return response.answer;
+  }
+
+  const ASSISTANT_URL = (
+    import.meta.env.VITE_ASSISTANT_SERVICE_URL?.trim() || 'http://127.0.0.1:8009'
+  ).replace(/\/$/, '');
+
+  async function handleQwenAsk(prompt) {
+    const text = prompt.trim();
+    if (!text) return;
+    const ts = Date.now();
+    setMessages((prev) => [...prev, { id: `user-${ts}`, role: 'driver', content: text }]);
+    setQwenLoading(true);
+    setActiveTab('assistant');
+
+    const context = {
+      vehicleType: activeVehicle.powertrain,
+      walletBalance,
+      selectedRoute: {
+        name: snapshot.selectedRoute.badge,
+        eta: snapshot.selectedRoute.etaMin,
+        toll: snapshot.selectedRoute.tollVnd,
+      },
+      fuelTrend: forecastData.fuelTrend
+        ? {
+            direction: forecastData.fuelTrend.trendDirection,
+            delta: forecastData.fuelTrend.deltaVnd,
+            confidence: forecastData.fuelTrend.confidence,
+          }
+        : null,
+      commuteWindow: forecastData.commuteWindow
+        ? {
+            bestDepartureTime: forecastData.commuteWindow.bestDepartureTime,
+            confidencePct: forecastData.commuteWindow.confidencePct,
+          }
+        : null,
+    };
+
+    try {
+      const res = await fetch(`${ASSISTANT_URL}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, context }),
+        signal: AbortSignal.timeout(35_000),
+      });
+      const data = res.ok ? await res.json() : null;
+      const reply = data?.reply ?? buildAssistantReply(text, snapshot).answer;
+      setMessages((prev) => [
+        ...prev,
+        { id: `assistant-${ts + 1}`, role: 'assistant', title: 'DriveMate AI', content: reply },
+      ]);
+    } catch {
+      const fallback = buildAssistantReply(text, snapshot);
+      setMessages((prev) => [
+        ...prev,
+        { id: `assistant-${ts + 1}`, role: 'assistant', title: fallback.title, content: fallback.answer },
+      ]);
+    } finally {
+      setQwenLoading(false);
+    }
   }
 
   function deliverAiResponse(prompt) {
@@ -363,6 +455,7 @@ export default function App() {
           setActiveTab={setActiveTab}
           formatCurrency={formatCurrency}
           onOpenNotifications={() => setActiveTab('notifications')}
+          forecastLoading={forecastLoading}
         />
       )}
 
@@ -393,6 +486,9 @@ export default function App() {
           setActiveTab={setActiveTab}
           setSelectedRouteId={setSelectedRouteId}
           formatCurrency={formatCurrency}
+          messages={messages}
+          onAsk={handleQwenAsk}
+          qwenLoading={qwenLoading}
         />
       )}
 

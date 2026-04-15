@@ -14,6 +14,7 @@ export function Dashboard({
   setActiveTab,
   formatCurrency,
   onOpenNotifications,
+  forecastLoading,
 }) {
   const { tripPrediction, primaryAction, secondaryActions, weeklyRecap } = snapshot;
 
@@ -63,7 +64,11 @@ export function Dashboard({
               <p className="section-label green">Predictive action</p>
               <h2>{tripPrediction.destination}</h2>
             </div>
-            <span className="confidence-badge">{tripPrediction.confidencePct}% likely</span>
+            <span className="confidence-badge">
+              {forecastLoading && tripPrediction.forecastSource !== 'timesfm-live'
+                ? 'Warming up...'
+                : `${tripPrediction.confidencePct}% likely`}
+            </span>
           </div>
 
           <div className="assistant-scenario-toggle dashboard-scenario-toggle">
@@ -83,7 +88,11 @@ export function Dashboard({
           </div>
 
           <p className="body-copy predictive-body-copy">
-            Leave at <strong>{tripPrediction.leaveAt}</strong>, take <strong>{selectedRoute.badge}</strong>, and let
+            Leave at <strong>{tripPrediction.leaveAt}</strong>
+            {tripPrediction.forecastSource === 'timesfm-live' && (
+              <span className="forecast-live-dot" aria-label="Live forecast" />
+            )}
+            , take <strong>{selectedRoute.badge}</strong>, and let
             DriveMate turn the commute into a concrete TASCO plan.
           </p>
 
@@ -101,6 +110,14 @@ export function Dashboard({
               <strong>{formatCurrency(tripPrediction.runningCostVnd)}</strong>
             </div>
           </div>
+
+          {tripPrediction.etaRangeMin && (
+            <div className="forecast-window-strip">
+              <span>Best window</span>
+              <strong>{tripPrediction.etaRangeMin[0]}–{tripPrediction.etaRangeMin[1]} min</strong>
+              <span className="forecast-source-label">{tripPrediction.forecastSource}</span>
+            </div>
+          )}
 
           <div className="predictive-primary-action surface-card">
             <div>

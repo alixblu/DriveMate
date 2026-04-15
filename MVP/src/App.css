@@ -2656,3 +2656,44 @@
     padding: 14px;
   }
 }
+
+/* Live forecast indicators */
+.forecast-live-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+  margin-left: 5px;
+  vertical-align: middle;
+}
+
+.forecast-window-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: #6b7280;
+  margin-top: 6px;
+}
+
+.forecast-window-strip strong {
+  color: #111827;
+}
+
+.forecast-source-label {
+  font-size: 0.72rem;
+  color: #9ca3af;
+  margin-left: auto;
+}
+
+.traffic-note {
+  font-size: 0.78rem;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.typing-indicator {
+  font-style: italic;
+  color: #9ca3af;
+}

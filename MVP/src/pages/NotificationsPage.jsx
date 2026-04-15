@@ -19,6 +19,26 @@ export function NotificationsPage({ snapshot, setActiveTab }) {
       </section>
 
       <section className="surface-card notifications-list-card">
+        {snapshot.fuelAlert?.active && (
+          <article className="notification-item">
+            <div>
+              <span className="notification-pill">Live fuel alert</span>
+              <strong>
+                Fuel rising +{snapshot.fuelAlert.deltaVnd.toLocaleString('vi-VN')} VND/L tomorrow
+              </strong>
+              <p>
+                Estimated weekly impact: ~{snapshot.fuelAlert.weeklyImpactVnd.toLocaleString('vi-VN')} VND. Top up tonight before the price changes.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="primary-action small"
+              onClick={() => setActiveTab('wallet')}
+            >
+              Top up wallet
+            </button>
+          </article>
+        )}
         {snapshot.notificationItems.map((notification) => (
           <article key={notification.id} className="notification-item">
             <div>

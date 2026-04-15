@@ -1,0 +1,52 @@
+version: "3.9"
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        VITE_TIMESFM_SERVICE_URL: /api/forecast
+        VITE_ASSISTANT_SERVICE_URL: /api/chat
+    ports:
+      - "80:80"
+    depends_on:
+      - timesfm_service
+      - assistant_service
+    networks:
+      - drivemate
+
+  timesfm_service:
+    build:
+      context: .
+      dockerfile: timesfm_service/Dockerfile
+    ports:
+      - "8008:8008"
+    env_file:
+      - .env
+    volumes:
+      - timesfm_cache:/app/timesfm_service/.hf-cache
+      - timesfm_home:/app/timesfm_service/.hf-home
+    networks:
+      - drivemate
+    restart: unless-stopped
+
+  assistant_service:
+    build:
+      context: .
+      dockerfile: assistant_service/Dockerfile
+    ports:
+      - "8009:8009"
+    env_file:
+      - .env
+    networks:
+      - drivemate
+    restart: unless-stopped
+
+networks:
+  drivemate:
+    driver: bridge
+
+volumes:
+  timesfm_cache:
+  timesfm_home:
