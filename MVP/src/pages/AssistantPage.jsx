@@ -1,5 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '../components/Icon';
+import { routeCatalog } from '../data/mockData';
+
+const PARKING_PRICE_PER_HOUR_VND = {
+  'Nguyen Hue Smart Parking': 30000,
+  'Le Loi Public Parking': 22000,
+  'District 1 Basement Parking': 35000,
+};
 
 function buildActionPanel(action, snapshot, formatCurrency) {
   switch (action.serviceType) {
@@ -83,6 +90,22 @@ export function AssistantPage({
   const threadRef = useRef(null);
   const activeTraffic = TRAFFIC_SCENARIOS.find((t) => t.id === trafficId) ?? TRAFFIC_SCENARIOS[0];
   const liveEta = snapshot.tripPrediction.etaMin + activeTraffic.delta;
+  const selectedRouteTemplate = useMemo(
+    () => routeCatalog.find((route) => route.id === snapshot.selectedRoute.id),
+    [snapshot.selectedRoute.id],
+  );
+  const estimatedFuelLitres = selectedRouteTemplate?.litresUsed ?? 0;
+  const estimatedEnergyKwh = selectedRouteTemplate?.kwhUsed ?? 0;
+  const fuelPricePerLitre = snapshot.scenario.fuelPriceVndPerLitre ?? 0;
+  const energyPricePerKwh = snapshot.scenario.chargePriceVndPerKwh ?? 0;
+  const fuelCostVnd = Math.round(estimatedFuelLitres * fuelPricePerLitre);
+  const energyCostVnd = Math.round(estimatedEnergyKwh * energyPricePerKwh);
+  const parkingHourlyVnd =
+    PARKING_PRICE_PER_HOUR_VND[snapshot.selectedRoute.parkingLotName] ?? 28000;
+  const tripPriceSuggestionVnd =
+    snapshot.selectedRoute.tollVnd +
+    (snapshot.vehicle.powertrain === 'ev' ? energyCostVnd : fuelCostVnd) +
+    parkingHourlyVnd;
 
   useEffect(() => {
     if (threadRef.current) {
@@ -182,6 +205,44 @@ export function AssistantPage({
         <div className="assistant-insight-grid">
           <div className="assistant-insight-tile">
             <span className="assistant-insight-icon" aria-hidden="true">
+              <Icon name="route" />
+            </span>
+            <div>
+              <p>Toll booths on the way</p>
+              <strong>{snapshot.selectedRoute.tollStations} booths</strong>
+            </div>
+          </div>
+          <div className="assistant-insight-tile">
+            <span className="assistant-insight-icon" aria-hidden="true">
+              <Icon name="fuel" />
+            </span>
+            <div>
+              <p>Energy needed</p>
+              <strong>{estimatedEnergyKwh.toFixed(1)} kWh · {formatCurrency(energyCostVnd)}</strong>
+            </div>
+          </div>
+          {snapshot.vehicle.powertrain !== 'ev' ? (
+            <div className="assistant-insight-tile">
+              <span className="assistant-insight-icon" aria-hidden="true">
+                <Icon name="fuel" />
+              </span>
+              <div>
+                <p>Fuel needed</p>
+                <strong>{estimatedFuelLitres.toFixed(1)} L · {formatCurrency(fuelCostVnd)}</strong>
+              </div>
+            </div>
+          ) : null}
+          <div className="assistant-insight-tile">
+            <span className="assistant-insight-icon" aria-hidden="true">
+              <Icon name="document" />
+            </span>
+            <div>
+              <p>Parking near destination</p>
+              <strong>{snapshot.selectedRoute.parkingLotName} · {formatCurrency(parkingHourlyVnd)}/h</strong>
+            </div>
+          </div>
+          <div className="assistant-insight-tile">
+            <span className="assistant-insight-icon" aria-hidden="true">
               <Icon name="wallet" />
             </span>
             <div>
@@ -191,29 +252,11 @@ export function AssistantPage({
           </div>
           <div className="assistant-insight-tile">
             <span className="assistant-insight-icon" aria-hidden="true">
-              <Icon name="route" />
-            </span>
-            <div>
-              <p>Toll stations</p>
-              <strong>{snapshot.selectedRoute.tollStations}</strong>
-            </div>
-          </div>
-          <div className="assistant-insight-tile">
-            <span className="assistant-insight-icon" aria-hidden="true">
-              <Icon name={snapshot.vehicle.powertrain === 'ev' ? 'fuel' : 'document'} />
-            </span>
-            <div>
-              <p>Arrival service</p>
-              <strong>{snapshot.selectedRoute.destinationServiceName}</strong>
-            </div>
-          </div>
-          <div className="assistant-insight-tile">
-            <span className="assistant-insight-icon" aria-hidden="true">
               <Icon name="sparkles" />
             </span>
             <div>
-              <p>Weekly savings</p>
-              <strong>{formatCurrency(snapshot.weeklyRecap.moneySavedVnd)}</strong>
+              <p>Trip price suggestion</p>
+              <strong>{formatCurrency(tripPriceSuggestionVnd)}</strong>
             </div>
           </div>
         </div>

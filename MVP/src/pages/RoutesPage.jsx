@@ -10,37 +10,69 @@ import {
   resolveDestination,
 } from '../data/mapData';
 
-function RouteCard({ route, isSelected, isRecommended, onSelect, formatCurrency }) {
+function RouteCard({
+  route,
+  isSelected,
+  isRecommended,
+  onSelect,
+  formatCurrency,
+  powertrain,
+  chargePricePerKwh,
+  runningCostLabel,
+}) {
+  const estimatedKwh = chargePricePerKwh > 0 ? route.runningCostVnd / chargePricePerKwh : 0;
+  const reservePercent =
+    estimatedKwh <= 4.5 ? 18 : estimatedKwh <= 5.5 ? 22 : 28;
+  const energySuggestion =
+    estimatedKwh <= 4.5
+      ? 'Energy tip: no charging stop needed before departure.'
+      : estimatedKwh <= 5.5
+        ? 'Energy tip: prepare a light top-up after arrival.'
+        : 'Energy tip: plan charging before the return trip.';
+
   return (
     <button
       type="button"
       className={`assistant-route-item route-choice-card ${isSelected ? 'active' : ''}`}
       onClick={() => onSelect(route.id)}
     >
-      <div>
-        <p>{route.label}</p>
+      <div className="route-choice-head">
         <strong>{route.badge}</strong>
-      </div>
-      <div>
-        <span>ETA</span>
         <span>{route.etaMin} min</span>
       </div>
-      <div>
+      <div className="route-choice-kpi">
         <span>Toll</span>
-        <span>{formatCurrency(route.tollVnd)}</span>
+        <strong>{formatCurrency(route.tollVnd)}</strong>
       </div>
-      <div>
-        <span>Fuel / charge</span>
-        <span>{formatCurrency(route.runningCostVnd)}</span>
+      <div className="route-choice-kpi">
+        <span>{runningCostLabel}</span>
+        <strong>{formatCurrency(route.runningCostVnd)}</strong>
       </div>
-      <div>
+      <div className="route-choice-kpi route-choice-total">
         <span>Total</span>
-        <span>{formatCurrency(route.totalCostVnd)}</span>
+        <strong>{formatCurrency(route.totalCostVnd)}</strong>
       </div>
       <div className="route-choice-foot">
         <small>{route.serviceOutcome}</small>
         {isRecommended ? <span className="route-badge recommended">Recommended</span> : null}
       </div>
+      {isSelected ? (
+        <div className="route-choice-energy-suggest">
+          {powertrain === 'ev' ? (
+            <>
+              <span>{energySuggestion}</span>
+              <strong>
+                Est. energy: {estimatedKwh.toFixed(1)} kWh · keep about {reservePercent}% battery
+              </strong>
+            </>
+          ) : (
+            <>
+              <span>Fuel tip: keep a safety buffer before return trip.</span>
+              <strong>Est. fuel budget: {formatCurrency(route.runningCostVnd)}</strong>
+            </>
+          )}
+        </div>
+      ) : null}
     </button>
   );
 }
@@ -70,6 +102,19 @@ export function RoutesPage({
   });
   const destInput = destDraft.key === activeDestination.key ? destDraft.value : activeDestination.label;
   const showDestinationChips = !destInput.trim();
+  const destinationSuggestions = useMemo(() => {
+    const query = destInput.trim().toLowerCase();
+    if (!query) return DESTINATIONS.slice(0, 3);
+
+    const matched = DESTINATIONS.filter((destination) =>
+      destination.label.toLowerCase().includes(query),
+    );
+    const filler = DESTINATIONS.filter(
+      (destination) => !matched.some((m) => m.key === destination.key),
+    );
+
+    return [...matched, ...filler].slice(0, 3);
+  }, [destInput]);
   const destinationAction =
     snapshot.secondaryActions?.find((action) => action.serviceType === 'parking') ??
     snapshot.secondaryActions?.find((action) => action.serviceType === 'charging');
@@ -141,6 +186,23 @@ export function RoutesPage({
           <button type="button" className="routes-dest-apply" onClick={() => applyDestination(destInput)}>
             <Icon name="send" />
           </button>
+        </div>
+        <div className="routes-dest-suggestions" role="listbox" aria-label="Suggested destinations">
+          {destinationSuggestions.map((destination) => (
+            <button
+              key={`suggest-${destination.key}`}
+              type="button"
+              className={`routes-dest-suggestion${
+                activeDestination.key === destination.key ? ' active' : ''
+              }`}
+              onClick={() => {
+                setActiveDestination(destination);
+                setDestDraft({ key: destination.key, value: destination.label });
+              }}
+            >
+              {destination.label}
+            </button>
+          ))}
         </div>
         {showDestinationChips ? (
           <div className="routes-dest-chips">
@@ -215,6 +277,9 @@ export function RoutesPage({
               isRecommended={route.id === snapshot.recommendedRouteId}
               onSelect={setSelectedRouteId}
               formatCurrency={formatCurrency}
+              powertrain={activeVehicle.powertrain}
+              chargePricePerKwh={snapshot.scenario?.chargePriceVndPerKwh ?? 0}
+              runningCostLabel={activeVehicle.powertrain === 'ev' ? 'Charge' : 'Fuel'}
             />
           ))}
           {!selectedRouteOptions.length ? (

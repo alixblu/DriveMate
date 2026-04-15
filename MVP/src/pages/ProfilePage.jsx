@@ -1,11 +1,27 @@
 import React from 'react';
 import { user, vehicles } from '../data/mockData';
 
+function formatCurrency(vnd) {
+  return `${Math.round(vnd).toLocaleString('vi-VN')} VND`;
+}
+
 export function ProfilePage({
   snapshot,
   activeVehicleId,
   setActiveVehicleId,
 }) {
+  const isEv = snapshot.vehicle.powertrain === 'ev';
+  const selectedRoute = snapshot.selectedRoute;
+  const chargePrice = snapshot.scenario?.chargePriceVndPerKwh ?? 0;
+  const fuelPrice = snapshot.scenario?.fuelPriceVndPerLitre ?? 0;
+  const estimatedKwh =
+    isEv && chargePrice > 0 ? selectedRoute.runningCostVnd / chargePrice : 0;
+  const estimatedLitres =
+    !isEv && fuelPrice > 0 ? selectedRoute.runningCostVnd / fuelPrice : 0;
+  const activeSuggestion = isEv
+    ? `Suggested: top up before departure. Est. ${estimatedKwh.toFixed(1)} kWh (${formatCurrency(selectedRoute.runningCostVnd)}).`
+    : `Suggested: refuel about ${estimatedLitres.toFixed(1)} L. Est. ${formatCurrency(selectedRoute.runningCostVnd)}.`;
+
   return (
     <main className="mobile-content compact-top">
       <section className="surface-card profile-card">
@@ -42,6 +58,9 @@ export function ProfilePage({
                 <span className="garage-tile-main">
                   <strong>{vehicle.name}</strong>
                   <span>{vehicle.detail}</span>
+                  {vehicle.id === activeVehicleId ? (
+                    <span className="garage-tile-suggestion">{activeSuggestion}</span>
+                  ) : null}
                 </span>
               </button>
             ))}
