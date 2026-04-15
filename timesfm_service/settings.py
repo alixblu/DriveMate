@@ -4,6 +4,26 @@ from dataclasses import dataclass
 from pathlib import Path
 import os
 
+from dotenv import dotenv_values
+
+
+ROOT_DIR = Path(__file__).resolve().parent.parent
+ENV_FILE = ROOT_DIR / ".env"
+ENV_VALUES = dotenv_values(ENV_FILE) if ENV_FILE.exists() else {}
+
+# Force Hugging Face auth to come from repository .env, not machine-level env vars.
+_hf_token = (
+    ENV_VALUES.get("HUGGINGFACE_API_KEY")
+    or ENV_VALUES.get("HF_TOKEN")
+    or ENV_VALUES.get("HUGGINGFACEHUB_API_TOKEN")
+)
+if _hf_token:
+    os.environ["HF_TOKEN"] = _hf_token
+    os.environ["HUGGINGFACEHUB_API_TOKEN"] = _hf_token
+else:
+    os.environ.pop("HF_TOKEN", None)
+    os.environ.pop("HUGGINGFACEHUB_API_TOKEN", None)
+
 
 @dataclass(frozen=True)
 class ServiceSettings:
@@ -30,6 +50,7 @@ class ServiceSettings:
     cache_dir: Path = Path(__file__).resolve().parent / ".hf-cache"
     hf_home: Path = Path(__file__).resolve().parent / ".hf-home"
     hf_xet_cache: Path = Path(__file__).resolve().parent / ".hf-home" / "xet"
+    huggingface_token: str | None = _hf_token
 
 
 settings = ServiceSettings()

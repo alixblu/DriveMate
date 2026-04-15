@@ -11,6 +11,8 @@ This service keeps TimesFM behind stable, product-shaped endpoints so the Vite f
 ## Local setup
 
 ```powershell
+copy .env.example .env
+# then edit .env and set HUGGINGFACE_API_KEY
 python -m venv .venv
 .venv\Scripts\python -m pip install --upgrade pip
 .venv\Scripts\python -m pip install -r timesfm_service\requirements.txt

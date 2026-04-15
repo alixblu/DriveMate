@@ -1,8 +1,10 @@
 # DriveMate
 
-DriveMate AI is a fuel-first mobility assistant prototype for VETC.
+DriveMate AI is an AI driving companion integrated into VETC.
 
-The current MVP is built around one daily decision:
+The goal is to evolve VETC from a toll-payment utility into a daily-use mobility assistant.
+
+The current MVP is built around one daily decision loop:
 
 `when to leave + which route to take + when to refuel`
 
@@ -14,7 +16,7 @@ Instead of competing with navigation apps on ETA alone, DriveMate optimizes for 
 - `build_spec.txt` - original product build spec
 - `convo.txt` - early voice demo copy
 
-## Run
+## Run (Full stack)
 
 ```bash
 npm run dev
@@ -30,6 +32,23 @@ If you want to start it from inside the frontend folder instead:
 ```bash
 cd MVP
 npm run dev:stack
+```
+
+## Python setup (TimesFM sidecar)
+
+If this is your first run, create a virtual environment and install the sidecar dependencies:
+
+```powershell
+python -m venv .venv
+.venv\Scripts\python -m pip install --upgrade pip
+.venv\Scripts\python -m pip install -r timesfm_service\requirements.txt
+```
+
+Then copy env file and set your Hugging Face key:
+
+```powershell
+copy .env.example .env
+# edit .env and set HUGGINGFACE_API_KEY
 ```
 
 ## Docs
