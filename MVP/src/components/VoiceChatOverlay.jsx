@@ -13,6 +13,8 @@ export function VoiceChatOverlay({
   messages,
   onAsk,
   onReadAloud,
+  liveTranscript,
+  qwenLoading,
 }) {
   const [draftMessage, setDraftMessage] = useState('');
   const threadRef = useRef(null);
@@ -141,12 +143,50 @@ export function VoiceChatOverlay({
                     key={message.id}
                     className={`message-row ${message.role === 'assistant' ? 'assistant' : 'driver'}`}
                   >
+                    <div className="message-meta">
+                      <span
+                        className={`message-avatar ${message.role === 'assistant' ? 'assistant' : 'driver'}`}
+                        aria-hidden="true"
+                      >
+                        {message.role === 'assistant' ? 'AI' : 'You'}
+                      </span>
+                      <span className="message-name">
+                        {message.role === 'assistant' ? 'DriveMate' : 'You'}
+                      </span>
+                    </div>
                     <div className={`message-bubble ${message.role === 'assistant' ? 'assistant' : 'driver'}`}>
                       {message.title ? <strong>{message.title}. </strong> : null}
                       {message.content}
                     </div>
                   </div>
                 ))}
+                {(voiceState === 'listening' || voiceState === 'transcribing') && (
+                  <div className="message-row driver">
+                    <div className="message-meta">
+                      <span className="message-avatar driver" aria-hidden="true">
+                        You
+                      </span>
+                      <span className="message-name">You</span>
+                    </div>
+                    <div className="message-bubble driver voice-listening-bubble">
+                      <span className="voice-pulse-dot" aria-hidden="true" />
+                      {liveTranscript || (voiceState === 'listening' ? 'Listening...' : 'Transcribing...')}
+                    </div>
+                  </div>
+                )}
+                {qwenLoading && (
+                  <div className="message-row assistant">
+                    <div className="message-meta">
+                      <span className="message-avatar assistant" aria-hidden="true">
+                        AI
+                      </span>
+                      <span className="message-name">DriveMate</span>
+                    </div>
+                    <div className="message-bubble assistant">
+                      <em className="typing-indicator">DriveMate is thinking...</em>
+                    </div>
+                  </div>
+                )}
               </div>
             </section>
           </div>

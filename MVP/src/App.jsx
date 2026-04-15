@@ -19,6 +19,8 @@ import {
   scenarioCatalog,
 } from './lib/predictionEngine';
 import { loadLiveForecast, pollTimesFMHealth } from './lib/forecastAdapter';
+import { simulationReply } from './lib/simulationEngine';
+import { DESTINATIONS, matchDestination } from './data/mapData';
 
 function pickInitialTab() {
   if (typeof window === 'undefined') {
@@ -94,11 +96,13 @@ export default function App() {
   const [voiceState, setVoiceState] = useState('idle');
   const [voiceError, setVoiceError] = useState('');
   const [voiceChatOpen, setVoiceChatOpen] = useState(false);
+  const [activeDestination, setActiveDestination] = useState(DESTINATIONS[0]);
   const [availableVoices, setAvailableVoices] = useState([]);
   const [forecastData, setForecastData] = useState({ fuelTrend: null, commuteWindow: null });
   const [forecastLoading, setForecastLoading] = useState(true);
   const [timesfmReady, setTimesfmReady] = useState(false);
   const [qwenLoading, setQwenLoading] = useState(false);
+  const [liveTranscript, setLiveTranscript] = useState('');
 
   const recognitionRef = useRef(null);
   const speechUtteranceRef = useRef(null);
@@ -122,6 +126,14 @@ export default function App() {
 
   const activeVehicle =
     vehicles.find((vehicle) => vehicle.id === activeVehicleId) ?? vehicles[0];
+  const displayedDestination = activeDestination?.label ?? snapshot.tripPrediction.destination;
+  const voiceContext = useMemo(
+    () => ({
+      ...snapshot.voiceContext,
+      destination: displayedDestination,
+    }),
+    [displayedDestination, snapshot.voiceContext],
+  );
 
   function resetDemoState(nextScenarioId, nextVehicleId) {
     const seededSnapshot = createDriveMateSnapshot({
@@ -134,6 +146,7 @@ export default function App() {
     setRewardPoints(seededSnapshot.rewards.points);
     setTripCompleted(false);
     setMessages(createDecisionMessages(seededSnapshot));
+    setActiveDestination(DESTINATIONS[0]);
   }
 
   useEffect(() => {
@@ -237,41 +250,35 @@ export default function App() {
     window.speechSynthesis.speak(utterance);
   }
 
-  function handleAsk(prompt) {
-    const normalized = prompt.trim();
-    if (!normalized) return '';
-
-    const response = buildAssistantReply(normalized, snapshot);
-    const timestamp = Date.now();
-    setMessages((currentMessages) => [
-      ...currentMessages,
-      { id: `user-${timestamp}`, role: 'driver', content: normalized },
-      {
-        id: `assistant-${timestamp + 1}`,
-        role: 'assistant',
-        title: response.title,
-        content: response.answer,
-      },
-    ]);
-    setActiveTab('assistant');
-
-    return response.answer;
-  }
-
   const ASSISTANT_URL = (
     import.meta.env.VITE_ASSISTANT_SERVICE_URL?.trim() || 'http://127.0.0.1:8009'
   ).replace(/\/$/, '');
 
   async function handleQwenAsk(prompt) {
     const text = prompt.trim();
-    if (!text) return;
+    if (!text) return '';
     const ts = Date.now();
+    const matchedDestination = matchDestination(text);
+    if (matchedDestination) {
+      setActiveDestination(matchedDestination);
+    }
+
     setMessages((prev) => [...prev, { id: `user-${ts}`, role: 'driver', content: text }]);
+
+    const sim = simulationReply(text);
+    if (sim.matched) {
+      setMessages((prev) => [
+        ...prev,
+        { id: `assistant-${ts + 1}`, role: 'assistant', title: 'DriveMate AI', content: sim.text },
+      ]);
+      return sim.text;
+    }
+
     setQwenLoading(true);
-    setActiveTab('assistant');
 
     const context = {
       vehicleType: activeVehicle.powertrain,
+      destination: displayedDestination,
       walletBalance,
       selectedRoute: {
         name: snapshot.selectedRoute.badge,
@@ -306,19 +313,21 @@ export default function App() {
         ...prev,
         { id: `assistant-${ts + 1}`, role: 'assistant', title: 'DriveMate AI', content: reply },
       ]);
+      return reply;
     } catch {
       const fallback = buildAssistantReply(text, snapshot);
       setMessages((prev) => [
         ...prev,
         { id: `assistant-${ts + 1}`, role: 'assistant', title: fallback.title, content: fallback.answer },
       ]);
+      return fallback.answer;
     } finally {
       setQwenLoading(false);
     }
   }
 
-  function deliverAiResponse(prompt) {
-    const aiResponse = handleAsk(prompt);
+  async function deliverAiResponse(prompt) {
+    const aiResponse = await handleQwenAsk(prompt);
     if (!aiResponse) {
       setVoiceState('idle');
       return;
@@ -344,27 +353,34 @@ export default function App() {
       recognition.interimResults = true;
       recognition.maxAlternatives = 1;
 
-      recognition.onstart = () => setVoiceState('listening');
+      recognition.onstart = () => {
+        setLiveTranscript('');
+        setVoiceState('listening');
+      };
       recognition.onresult = (event) => {
         let transcript = '';
         for (let index = event.resultIndex; index < event.results.length; index += 1) {
           transcript += event.results[index][0].transcript;
         }
         finalTranscriptRef.current = transcript.trim();
+        setLiveTranscript(transcript.trim());
         setVoiceState('transcribing');
       };
       recognition.onerror = () => {
         setVoiceError('Speech recognition error.');
+        setLiveTranscript('');
         setVoiceState('paused');
       };
       recognition.onend = () => {
         const finalPrompt = finalTranscriptRef.current.trim();
         if (finalPrompt) {
+          setLiveTranscript('');
           setVoiceState('answering');
           deliverAiResponse(finalPrompt);
           finalTranscriptRef.current = '';
           return;
         }
+        setLiveTranscript('');
         setVoiceState('idle');
       };
 
@@ -374,6 +390,7 @@ export default function App() {
     stopSpeechPlayback();
     setVoiceError('');
     finalTranscriptRef.current = '';
+    setLiveTranscript('');
     recognitionRef.current.start();
   }
 
@@ -429,6 +446,7 @@ export default function App() {
     stopRecognition();
     stopSpeechPlayback();
     setVoiceError('');
+    setLiveTranscript('');
     setVoiceState('idle');
     setVoiceChatOpen(false);
   }
@@ -477,6 +495,8 @@ export default function App() {
           handleCompleteTrip={handleCompleteTrip}
           setActiveTab={setActiveTab}
           formatCurrency={formatCurrency}
+          activeDestination={activeDestination}
+          setActiveDestination={setActiveDestination}
         />
       )}
 
@@ -489,6 +509,7 @@ export default function App() {
           messages={messages}
           onAsk={handleQwenAsk}
           qwenLoading={qwenLoading}
+          activeDestination={activeDestination}
         />
       )}
 
@@ -521,11 +542,13 @@ export default function App() {
         voiceError={voiceError}
         startLiveRecognition={startLiveRecognition}
         stopRecognition={stopRecognition}
-        voiceContext={snapshot.voiceContext}
+        voiceContext={voiceContext}
         quickPrompts={snapshot.quickPrompts}
         messages={messages}
-        onAsk={handleAsk}
+        onAsk={handleQwenAsk}
         onReadAloud={handleReadAloud}
+        liveTranscript={liveTranscript}
+        qwenLoading={qwenLoading}
       />
     </Layout>
   );

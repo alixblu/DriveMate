@@ -76,6 +76,7 @@ export function AssistantPage({
   messages = [],
   onAsk,
   qwenLoading = false,
+  activeDestination,
 }) {
   const [trafficId, setTrafficId] = useState('normal');
   const [draft, setDraft] = useState('');
@@ -135,7 +136,7 @@ export function AssistantPage({
             <Icon name="route" />
           </span>
           <div>
-            <strong>{snapshot.tripPrediction.destination}</strong>
+            <strong>{activeDestination?.label ?? snapshot.tripPrediction.destination}</strong>
             <p>{snapshot.assistantBrief.headline}</p>
           </div>
         </div>
@@ -330,6 +331,12 @@ export function AssistantPage({
         <div ref={threadRef} className="conversation-thread" style={{ marginTop: 12 }}>
           {messages.map((m) => (
             <div key={m.id} className={`message-row ${m.role === 'assistant' ? 'assistant' : 'driver'}`}>
+              <div className="message-meta">
+                <span className={`message-avatar ${m.role === 'assistant' ? 'assistant' : 'driver'}`} aria-hidden="true">
+                  {m.role === 'assistant' ? 'AI' : 'You'}
+                </span>
+                <span className="message-name">{m.role === 'assistant' ? 'DriveMate' : 'You'}</span>
+              </div>
               <div className={`message-bubble ${m.role === 'assistant' ? 'assistant' : 'driver'}`}>
                 {m.title ? <strong>{m.title}. </strong> : null}
                 {m.content}
