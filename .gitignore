@@ -10,4 +10,4 @@ vite_native.stdout.log
 vite_native.stderr.log
 .claude
 .env
-!.env.example
+!.env.examplenode_modules/

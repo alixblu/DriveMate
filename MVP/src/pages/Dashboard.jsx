@@ -127,7 +127,7 @@ export function Dashboard({
             </div>
             <button
               type="button"
-              className="primary-action"
+              className="primary-action pulse-green"
               onClick={() => setActiveTab(primaryAction.ctaTab)}
             >
               {primaryAction.ctaLabel}
