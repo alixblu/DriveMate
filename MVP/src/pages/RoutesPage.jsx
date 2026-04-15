@@ -332,19 +332,35 @@ export function RoutesPage({
         </div>
       ) : null}
 
-      <section className="bottom-cta bottom-cta-routes surface-card">
-        <div>
-          <p className="section-label green">Drive plan</p>
-          <h2>{selectedRouteSafe?.badge ?? 'Route'} selected</h2>
-          <p>
-            {activeVehicle.shortName} · Wallet after toll:{' '}
-            {formatCurrency(Math.max(0, walletBalance - (selectedRouteSafe?.tollVnd ?? 0)))}
-          </p>
-        </div>
-        <button type="button" className="primary-action primary-action-compact" onClick={handleCompleteTrip}>
-          {tripCompleted ? 'Trip logged' : 'Start trip'}
-        </button>
-      </section>
+      {tripCompleted ? (
+        <section className="bottom-cta bottom-cta-routes surface-card trip-logged-card">
+          <div className="trip-logged-content">
+            <span className="success-check-mark" aria-hidden="true">✓</span>
+            <div>
+              <p className="section-label green">Trip Success</p>
+              <h2>Trip logged successfully</h2>
+              <p>Toll deducted. Rewards +{snapshot.rewards.recommendedRouteBonus} pts added to your wallet.</p>
+            </div>
+          </div>
+          <button type="button" className="secondary-action" onClick={() => setActiveTab('home')}>
+            Back home
+          </button>
+        </section>
+      ) : (
+        <section className="bottom-cta bottom-cta-routes surface-card">
+          <div>
+            <p className="section-label green">Drive plan</p>
+            <h2>{selectedRouteSafe?.badge ?? 'Route'} selected</h2>
+            <p>
+              {activeVehicle.shortName} · Wallet after toll:{' '}
+              {formatCurrency(Math.max(0, walletBalance - (selectedRouteSafe?.tollVnd ?? 0)))}
+            </p>
+          </div>
+          <button type="button" className="primary-action primary-action-compact" onClick={handleCompleteTrip}>
+            Start trip
+          </button>
+        </section>
+      )}
     </main>
   );
 }
