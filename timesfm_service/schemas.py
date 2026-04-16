@@ -34,8 +34,10 @@ class CommuteWindowResponse(BaseModel):
     destination: str
     etaRangeMin: list[int]
     trafficBand: str
+    jamPrediction: str
     bestDepartureWindow: str
     bestDepartureTime: str
+    leaveTimeSuggestion: str
     confidencePct: int
     source: str
     fallbackUsed: bool

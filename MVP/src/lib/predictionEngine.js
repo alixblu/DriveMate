@@ -377,7 +377,7 @@ function buildNotifications({
 }
 
 function buildAssistantBrief({
-  scenario,
+  tripPrediction,
   vehicle,
   selectedRoute,
   primaryAction,
@@ -385,8 +385,10 @@ function buildAssistantBrief({
   runningCostLabel,
 }) {
   return {
-    headline: `${selectedRoute.badge} at ${scenario.leaveAt} keeps the ${scenario.destination.toLowerCase()} trip in control.`,
-    explanation: `DriveMate predicts ${scenario.destination} with ${scenario.confidencePct}% confidence, recommends ${selectedRoute.badge}, and then turns the trip into TASCO actions: ${primaryAction.title.toLowerCase()}. For ${vehicle.vehicleMode} mode, that keeps toll + ${runningCostLabel.toLowerCase()} near ${selectedRoute.totalCostVnd.toLocaleString('vi-VN')} VND and supports about ${weeklyRecap.moneySavedVnd.toLocaleString('vi-VN')} VND saved this week.`,
+    headline:
+      tripPrediction.leaveTimeSuggestion ??
+      `${selectedRoute.badge} at ${tripPrediction.leaveAt} keeps the ${tripPrediction.destination.toLowerCase()} trip in control.`,
+    explanation: `DriveMate predicts ${tripPrediction.destination} with ${tripPrediction.confidencePct}% confidence, recommends ${selectedRoute.badge}, and then turns the trip into TASCO actions: ${primaryAction.title.toLowerCase()}. For ${vehicle.vehicleMode} mode, that keeps toll + ${runningCostLabel.toLowerCase()} near ${selectedRoute.totalCostVnd.toLocaleString('vi-VN')} VND and supports about ${weeklyRecap.moneySavedVnd.toLocaleString('vi-VN')} VND saved this week.`,
   };
 }
 
@@ -438,6 +440,7 @@ export function createDriveMateSnapshot({
 
   // Merge live TimesFM data into the snapshot — fall back to scenario seeds when null
   const liveDepartureTime = commuteWindow?.bestDepartureTime ?? null;
+  const liveDestination = commuteWindow?.destination ?? scenario.destination;
   const liveConfidencePct = commuteWindow?.confidencePct ?? scenario.confidencePct;
   const liveEtaRange = commuteWindow?.etaRangeMin ?? null;
   const liveTrafficBand = commuteWindow?.trafficBand ?? scenario.trafficBand;
@@ -472,12 +475,18 @@ export function createDriveMateSnapshot({
   });
   const weeklyRecap = buildWeeklyRecap(scenario, vehicle, primaryAction);
   const tripPrediction = {
-    destination: scenario.destination,
+    destination: liveDestination,
     confidencePct: liveConfidencePct,
     leaveAt: liveDepartureTime ?? scenario.leaveAt,
     etaMin: selectedRoute.etaMin,
     etaRangeMin: liveEtaRange,
     trafficBand: liveTrafficBand,
+    jamPrediction:
+      commuteWindow?.jamPrediction ??
+      `Traffic jam risk rises after ${liveDepartureTime ?? scenario.leaveAt} on the ${liveDestination} corridor.`,
+    leaveTimeSuggestion:
+      commuteWindow?.leaveTimeSuggestion ??
+      `Best Value at ${liveDepartureTime ?? scenario.leaveAt} keeps the ${liveDestination.toLowerCase()} trip in control.`,
     forecastSource: liveSource,
     routeId: selectedRoute.id,
     tollVnd: selectedRoute.tollVnd,
@@ -495,7 +504,7 @@ export function createDriveMateSnapshot({
     walletForecast,
   });
   const assistantBrief = buildAssistantBrief({
-    scenario,
+    tripPrediction,
     vehicle,
     selectedRoute,
     primaryAction,

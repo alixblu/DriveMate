@@ -135,7 +135,7 @@ export function AssistantPage({
       ? {
           title: `${activeAction.title}${activeTraffic.delta > 0 ? ` (${activeTraffic.label}: +${activeTraffic.delta} min)` : ''}`,
           lines: [
-            snapshot.tripPrediction.trafficBand,
+            snapshot.tripPrediction.jamPrediction ?? snapshot.tripPrediction.trafficBand,
             `Current route ETA: ${liveEta} min`,
             `Leaving at ${snapshot.tripPrediction.leaveAt} protects about ${snapshot.scenario.leaveEarlyMinutesSaved} minutes.`,
           ],
@@ -193,7 +193,9 @@ export function AssistantPage({
               </button>
             ))}
           </div>
-          <p className="traffic-note">{snapshot.tripPrediction.trafficBand}</p>
+          <p className="traffic-note">
+            {snapshot.tripPrediction.jamPrediction ?? snapshot.tripPrediction.trafficBand}
+          </p>
         </div>
       </section>
 

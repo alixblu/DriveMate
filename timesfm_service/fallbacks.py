@@ -14,8 +14,22 @@ def build_commute_fallback(
     model_name: str,
     history_points_used: int,
 ) -> dict:
+    destination = scenario["fallbackCommuteWindow"].get(
+        "destination",
+        scenario.get("commuteHistory", {}).get("destination", "destination"),
+    )
+    best_departure_time = scenario["fallbackCommuteWindow"].get(
+        "bestDepartureTime", "07:40"
+    )
+
     payload = {
         **scenario["fallbackCommuteWindow"],
+        "jamPrediction": (
+            f"Traffic jam risk rises after {best_departure_time} on the {destination} corridor."
+        ),
+        "leaveTimeSuggestion": (
+            f"Best Value at {best_departure_time} keeps the {destination.lower()} trip in control."
+        ),
         "fallbackUsed": True,
         "modelName": model_name,
         "generatedAt": utc_now_iso(),

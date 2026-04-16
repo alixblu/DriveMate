@@ -320,18 +320,26 @@ class ForecastService:
         best_gap = sorted(predicted)[1] - sorted(predicted)[0] if len(predicted) > 1 else 0
         confidence = clamp_int(70 + best_gap * 3 + stability_score * 18, 72, 92)
 
+        destination = scenario["commuteHistory"]["destination"]
         return {
-            "destination": scenario["commuteHistory"]["destination"],
+            "destination": destination,
             "etaRangeMin": [low_eta, high_eta],
             "trafficBand": (
                 f"Peak traffic builds after {departure_slots[peak_start_index]} "
                 f"and stays heavy until {departure_slots[peak_end_index]}"
+            ),
+            "jamPrediction": (
+                f"Traffic jam risk rises from {departure_slots[peak_start_index]} "
+                f"to {departure_slots[peak_end_index]} on the {destination} corridor."
             ),
             "bestDepartureWindow": (
                 f"{departure_slots[max(0, best_index - 1)]} - "
                 f"{departure_slots[min(len(departure_slots) - 1, best_index + 1)]}"
             ),
             "bestDepartureTime": departure_slots[best_index],
+            "leaveTimeSuggestion": (
+                f"Best Value at {departure_slots[best_index]} keeps the {destination.lower()} trip in control."
+            ),
             "confidencePct": confidence,
             "source": "timesfm-live",
             "fallbackUsed": False,

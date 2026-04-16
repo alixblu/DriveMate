@@ -52,8 +52,10 @@ const scenarioData = {
       destination: 'District 1 Office',
       etaRangeMin: [24, 35],
       trafficBand: 'Peak traffic between 07:50 and 08:30',
+      jamPrediction: 'Traffic jam risk rises from 07:50 to 08:30 on the District 1 corridor.',
       bestDepartureWindow: '07:35 - 07:50',
       bestDepartureTime: '07:40',
+      leaveTimeSuggestion: 'Best Value at 07:40 keeps the trip in control.',
       confidencePct: 82,
       source: 'seeded-starter-forecast',
       fallbackUsed: false,
@@ -82,8 +84,10 @@ const scenarioData = {
       destination: 'District 1 Office',
       etaRangeMin: [26, 36],
       trafficBand: 'Traffic is moderate but still thick after 08:00',
+      jamPrediction: 'Traffic jam risk rises after 08:00 on the District 1 corridor.',
       bestDepartureWindow: '07:45 - 08:00',
       bestDepartureTime: '07:50',
+      leaveTimeSuggestion: 'Best Value at 07:50 keeps the trip in control.',
       confidencePct: 78,
       source: 'seeded-starter-forecast',
       fallbackUsed: false,
@@ -112,8 +116,10 @@ const scenarioData = {
       destination: 'District 1 Office',
       etaRangeMin: [25, 36],
       trafficBand: 'Seeded backup predicts the same 07:50 to 08:30 peak jam',
+      jamPrediction: 'Traffic jam risk rises from 07:50 to 08:30 on the District 1 corridor.',
       bestDepartureWindow: '07:35 - 07:50',
       bestDepartureTime: '07:40',
+      leaveTimeSuggestion: 'Best Value at 07:40 keeps the trip in control.',
       confidencePct: 74,
       source: 'forced-seeded-fallback',
       fallbackUsed: true,
@@ -164,9 +170,12 @@ function buildSeededCommuteWindow(
   scenarioId = DEFAULT_SCENARIO_ID,
 ) {
   const scenario = getScenarioData(scenarioId)
+  const destination = scenario.commuteWindow.destination
 
   return {
     ...scenario.commuteWindow,
+    jamPrediction: `Traffic jam risk rises after ${scenario.commuteWindow.bestDepartureTime} on the ${destination} corridor.`,
+    leaveTimeSuggestion: `Best Value at ${scenario.commuteWindow.bestDepartureTime} keeps the ${destination.toLowerCase()} trip in control.`,
     date,
     userId: userProfile.id,
     modelName: 'seeded-scenario',
@@ -285,8 +294,16 @@ function normalizeCommuteWindow(raw, userProfile, date, scenarioId) {
         : seededCommuteWindow.destination,
     etaRangeMin: etaRangeMin.map((value) => Math.round(value)),
     trafficBand: raw.trafficBand,
+    jamPrediction:
+      typeof raw.jamPrediction === 'string' && raw.jamPrediction.trim()
+        ? raw.jamPrediction
+        : seededCommuteWindow.jamPrediction,
     bestDepartureWindow: raw.bestDepartureWindow,
     bestDepartureTime: raw.bestDepartureTime,
+    leaveTimeSuggestion:
+      typeof raw.leaveTimeSuggestion === 'string' && raw.leaveTimeSuggestion.trim()
+        ? raw.leaveTimeSuggestion
+        : seededCommuteWindow.leaveTimeSuggestion,
     confidencePct: clampPercent(Number(raw.confidencePct ?? seededCommuteWindow.confidencePct)),
     source: typeof raw.source === 'string' ? raw.source : 'timesfm-live',
     fallbackUsed: Boolean(raw.fallbackUsed),
