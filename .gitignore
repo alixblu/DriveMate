@@ -11,3 +11,4 @@ vite_native.stderr.log
 .claude
 .env
 !.env.examplenode_modules/
+.cursor/

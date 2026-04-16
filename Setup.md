@@ -146,89 +146,156 @@ If TimesFM is still loading, the app still works with seeded data — no blank s
 
 ---
 
-### Step 5 — Deploy to Alibaba Cloud ECS
+### Step 5 — Deploy to Alibaba Cloud Function Compute (FC)
 
-#### 5a. Provision an ECS instance
+This stack has 3 deployable parts:
 
-In the Alibaba Cloud console:
-1. Go to **ECS → Instances → Create Instance**
-2. Recommended spec: `ecs.c7.2xlarge` (8 vCPU / 16 GB RAM) — TimesFM needs ~4 GB RAM
-3. OS: **Ubuntu 22.04 LTS**
-4. Storage: 40 GB system disk + 50 GB data disk (for the model cache)
-5. In **Security Group**, open:
-   - Port **80** (HTTP) — inbound from `0.0.0.0/0`
-   - Port **22** (SSH) — inbound from your IP only
-   - Ports 8008, 8009 stay closed to public (Nginx handles them internally)
+1. `timesfm_service` (forecast API)
+2. `assistant_service` (Qwen chat API)
+3. `MVP` frontend (static site)
 
-#### 5b. Install Docker on ECS
+Recommended production shape:
 
-SSH into your ECS instance, then:
+- Backend APIs on **Function Compute 3.0 (Custom Container Runtime)**
+- Frontend on **OSS static website** (or FC web function if you prefer)
+- Unified public entry via **API Gateway** + custom domain
+
+#### 5a. Prepare Alibaba Cloud resources
+
+In Alibaba Cloud console:
+
+1. Create a **Resource Group** for DriveMate.
+2. Create a **Container Registry (ACR)** namespace + repo:
+   - `drivemate/timesfm-service`
+   - `drivemate/assistant-service`
+3. Create a **Function Compute 3.0** service, for example `drivemate-prod`.
+4. (Recommended) Create a **NAS file system** and mount target for model cache.
+   - TimesFM first load downloads ~1.5 GB; NAS avoids repeated cold downloads.
+5. Create an **API Gateway** HTTP API (or use FC built-in HTTP trigger first).
+
+#### 5b. Build and push backend images
+
+From repo root on your local/dev machine:
 
 ```bash
-curl -fsSL https://get.docker.com | sh
-sudo usermod -aG docker $USER
-newgrp docker
-docker compose version   # should print Docker Compose version
+# Login to Alibaba ACR
+docker login --username=<your_account> <your_registry>.cn-<region>.cr.aliyuncs.com
+
+# Build TimesFM image
+docker build -f Dockerfile.timesfm -t <your_registry>.cn-<region>.cr.aliyuncs.com/drivemate/timesfm-service:latest .
+docker push <your_registry>.cn-<region>.cr.aliyuncs.com/drivemate/timesfm-service:latest
+
+# Build Assistant image
+docker build -f Dockerfile.assistant -t <your_registry>.cn-<region>.cr.aliyuncs.com/drivemate/assistant-service:latest .
+docker push <your_registry>.cn-<region>.cr.aliyuncs.com/drivemate/assistant-service:latest
 ```
 
-#### 5c. Copy project files to ECS
+#### 5c. Create FC function: `timesfm_service`
 
-From your local machine:
+In **Function Compute → Service `drivemate-prod` → Create Function**:
+
+1. Runtime type: **Custom Container**.
+2. Image: `.../drivemate/timesfm-service:latest`.
+3. Memory/CPU suggestion:
+   - Start with **4 vCPU / 8 GB** (increase if latency is high).
+4. Timeout: **120s** (or higher for warm-up tolerance).
+5. Environment variables:
+   - `HUGGINGFACE_API_KEY=<your_key>`
+6. (Recommended) Mount NAS:
+   - mount path example: `/mnt/nas`
+   - set cache env for huggingface model directory if needed.
+7. Enable HTTP trigger (temporary direct test).
+
+Health check after deploy:
 
 ```bash
-# Option A: SCP
-scp -r D:\GitRepo\DriveMate ubuntu@YOUR_ECS_IP:~/drivemate
-
-# Option B: Git clone (if repo is on GitHub)
-ssh ubuntu@YOUR_ECS_IP
-git clone https://github.com/YOUR_USERNAME/DriveMate ~/drivemate
+curl https://<timesfm_fc_public_url>/health
 ```
 
-#### 5d. Set up `.env` on ECS
+#### 5d. Create FC function: `assistant_service`
+
+In the same FC service, create another function:
+
+1. Runtime type: **Custom Container**.
+2. Image: `.../drivemate/assistant-service:latest`.
+3. Memory/CPU suggestion:
+   - **1 vCPU / 2 GB** is usually enough.
+4. Timeout: **30s**.
+5. Environment variables:
+   - `DASHSCOPE_API_KEY=<your_key>`
+   - `QWEN_MODEL=qwen-plus` (or `qwen-turbo` / `qwen-max`)
+6. Enable HTTP trigger.
+
+Health check:
 
 ```bash
-ssh ubuntu@YOUR_ECS_IP
-cd ~/drivemate
-cp .env.example .env
-nano .env
-# Fill in HUGGINGFACE_API_KEY and DASHSCOPE_API_KEY
+curl https://<assistant_fc_public_url>/health
 ```
 
-#### 5e. Build and start all services
+#### 5e. Configure API Gateway routes (single public API domain)
+
+Create routes and map to FC functions:
+
+- `GET /api/forecast/health` -> `timesfm_service` `/health`
+- `POST /api/forecast/commute-window` -> `timesfm_service` `/forecast/commute-window`
+- `POST /api/forecast/fuel-trend` -> `timesfm_service` `/forecast/fuel-trend`
+- `GET /api/assistant/health` -> `assistant_service` `/health`
+- `POST /api/chat` -> `assistant_service` `/chat`
+
+Make sure CORS is enabled for your frontend domain.
+
+#### 5f. Deploy frontend (MVP) as static site
+
+Build frontend:
 
 ```bash
-cd ~/drivemate
-docker compose build       # takes 5–10 min first time (builds 3 images)
-docker compose up -d       # starts all 3 containers in background
+cd MVP
+npm install
+npm run build
 ```
 
-Watch TimesFM warm up:
+Upload `MVP/dist` to OSS bucket (example: `drivemate-web-prod`) and enable static website hosting:
 
-```bash
-docker compose logs -f timesfm_service
-# Wait for: "Application startup complete."
-# First run downloads ~1.5 GB model from Hugging Face
+- Index document: `index.html`
+- Error document: `index.html` (for SPA routes)
+
+Set frontend env before build (or in CI):
+
+```env
+VITE_TIMESFM_SERVICE_URL=https://<your_api_domain>/api/forecast
+VITE_ASSISTANT_SERVICE_URL=https://<your_api_domain>/api
 ```
 
-#### 5f. Verify deployment
+#### 5g. Validate end-to-end behavior
 
 ```bash
-# All containers running?
-docker compose ps
+# TimesFM API (through API gateway)
+curl https://<your_api_domain>/api/forecast/health
 
-# TimesFM health
-curl http://localhost/api/forecast/health
+# Assistant API (through API gateway)
+curl https://<your_api_domain>/api/assistant/health
 
-# Assistant health
-curl http://localhost/api/assistant/health
-
-# Test Qwen chat
-curl -X POST http://localhost/api/chat \
+# Qwen chat test
+curl -X POST https://<your_api_domain>/api/chat \
   -H "Content-Type: application/json" \
   -d '{"message":"Which route should I take today?","context":null}'
 ```
 
-Then open `http://YOUR_ECS_IP/` in a browser — the full app should load.
+Open frontend URL and verify:
+
+- Dashboard forecast appears (TimesFM live or fallback seeded)
+- Assistant returns Qwen answer for non-scripted prompts
+- App still works if TimesFM is temporarily unavailable (seeded fallback path)
+
+#### 5h. Recommended FC settings for stability
+
+- Enable provisioned concurrency for TimesFM function (reduce cold starts).
+- Keep TimesFM model cache on NAS.
+- Use logs/metrics alarms for:
+  - function timeout
+  - 5xx rate
+  - cold start latency
+- Set gradual rollout by version/alias when updating images.
 
 ---
 
