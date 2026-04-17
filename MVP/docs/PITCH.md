@@ -62,7 +62,7 @@ DriveMate for VETC is an AI-powered driving companion that transforms VETC from 
 - MVP starts with seeded values and promotes to live model outputs after warm-up.
 - If forecasting is unavailable, graceful fallback preserves recommendation continuity for demo and production resilience.
 
-## Why We Can Execute In 90 Days
+## Why We Can Execute
 - Live forecast APIs are already working and integrated in the MVP flow.
 - VETC already has an active user base with real transaction intent.
 - Wallet infrastructure already exists for top-up and payment continuity actions.
@@ -70,17 +70,17 @@ DriveMate for VETC is an AI-powered driving companion that transforms VETC from 
 - Forecasting infrastructure is already deployed with graceful fallback behavior.
 - We are not starting from zero, we are activating assets VETC already owns.
 
-## Business Impact (Judges + Leadership + Partners)
-- **For judges:** AI is core to the decision loop, measurable, and not decorative.
-- **For leadership:** this creates a repeat daily reason to open VETC, improving DAU and retention.
-- **For partners/investors:** DriveMate sits at the intersection of mobility intent, payment rails, and service conversion.
-- **For business expansion:** higher engagement leads to stronger service usage, richer mobility data, and new monetization opportunities.
+## Business Impact
+- DriveMate positions AI as a core part of the decision loop, making the product more measurable, useful, and differentiated.
+- It creates a repeat daily reason to open VETC, supporting stronger engagement, retention, and long-term user value.
+- It strengthens the connection between mobility intent, payment rails, and service conversion across the VETC ecosystem.
+- It also creates a broader platform story for leadership, judges, and strategic partners such as Alibaba Cloud by showing how AI can unlock new service usage, data value, and monetization opportunities.
 
-## 90-Day Roadmap
+## Future Improvements
 - Deepen parking and charging recommendation quality with location-specific constraints.
-- Add stronger wallet protection and top-up timing policies per route risk.
+- Add stronger wallet protection and top-up timing policies based on route risk.
 - Expand car wash and convenience stop ranking in post-commute windows.
-- Improve personalization from user driving patterns and prior conversion behavior.
+- Improve personalization using user driving patterns and prior conversion behavior.
 
 ## Closing
 DriveMate is not another feature for VETC. It is the intelligence layer that unlocks daily engagement and the full value of the VETC ecosystem.

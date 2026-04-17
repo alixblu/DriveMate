@@ -48,6 +48,37 @@ npm run dev
 
 Frontend runs at `http://127.0.0.1:4173`.
 
+## Run locally with Docker
+
+You can run the full stack (frontend + TimesFM + assistant) with Docker Compose.
+
+### 1) Prepare env file
+
+```powershell
+copy .env.example .env
+# edit .env and set:
+# HUGGINGFACE_API_KEY=...
+# DASHSCOPE_API_KEY=...
+```
+
+### 2) Build and start services
+
+```powershell
+docker compose up --build -d
+```
+
+### 3) Open app + check health
+
+- App: `http://localhost`
+- TimesFM health: `http://localhost/api/forecast/health`
+- Assistant health: `http://localhost/api/assistant/health`
+
+### 4) Stop services
+
+```powershell
+docker compose down
+```
+
 ## Environment setup
 
 ```powershell

@@ -540,6 +540,7 @@ export function createDriveMateSnapshot({
     assistantBrief,
     voiceContext: {
       destination: scenario.destination,
+      vehicleName: vehicle.name,
       routeLabel: selectedRoute.badge,
       etaMins: selectedRoute.etaMin,
       tollSummary: `${selectedRoute.tollStations} toll station${selectedRoute.tollStations > 1 ? 's' : ''} · ${selectedRoute.tollVnd.toLocaleString('vi-VN')} VND`,
@@ -679,7 +680,8 @@ export function buildAssistantReply(question, snapshot) {
   }
 
   return {
-    title: 'Predictive summary',
-    answer: `${snapshot.assistantBrief.explanation} The next TASCO action is ${snapshot.primaryAction.title.toLowerCase()}.`,
+    title: 'DriveMate',
+    answer:
+      "I'm not sure yet — could you share your destination, when you want to leave, or what you want to optimize (time, toll, or fuel)? You can also open Home or Routes for your current commute card.",
   };
 }

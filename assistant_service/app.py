@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from typing import Literal
+
+from pydantic import BaseModel, Field
 import httpx
 
 from .settings import settings
@@ -16,12 +18,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+MAX_HISTORY_MESSAGES = 24
+
 SYSTEM_PROMPT = (
-    "You are DriveMate AI assistant integrated into the VETC toll and mobility app. "
-    "Help users with route planning, toll payments, fuel or charging decisions, "
-    "parking reservations, and wallet top-up decisions. "
-    "Be concise and action-oriented. Respond in 2-4 sentences. "
-    "If you recommend an action, name the specific tab or feature to use in the app."
+    "You are DriveMate AI, a conversational assistant inside the VETC toll and mobility app. "
+    "You help with commute timing, routes, toll wallet, fuel or charging, parking, and related trip decisions. "
+    "Be natural and concise (usually 2-5 short sentences). Match the user's language when they write in Vietnamese or English. "
+    "Use the Trip context block only as hints; it may be incomplete. Do not invent wallet balances, prices, ETAs, or routes not implied there. "
+    "If the user's question is vague or missing a destination, time, or goal, ask one or two specific clarifying questions before giving advice. "
+    "If you cannot answer from context or general mobility knowledge, say you are not sure and suggest what detail would help, or what they can check in the app (Home, Routes, Wallet). "
+    "Do not dump a long marketing paragraph or repeat the entire trip summary unless the user asked for a summary."
 )
 
 
@@ -45,16 +51,24 @@ class RouteCtx(BaseModel):
 
 
 class ChatContext(BaseModel):
+    vehicleName: str | None = None
     vehicleType: str | None = None       # "ev" | "ice"
+    destination: str | None = None
     walletBalance: int | None = None
     selectedRoute: RouteCtx | None = None
     fuelTrend: FuelTrendCtx | None = None
     commuteWindow: CommuteWindowCtx | None = None
 
 
+class ChatHistoryMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=12000)
+
+
 class ChatRequest(BaseModel):
     message: str
     context: ChatContext | None = None
+    history: list[ChatHistoryMessage] | None = None
 
 
 class ChatResponse(BaseModel):
@@ -67,8 +81,14 @@ def _build_context_text(ctx: ChatContext | None) -> str:
     if not ctx:
         return ""
     parts: list[str] = []
-    if ctx.vehicleType:
-        parts.append(f"Vehicle type: {ctx.vehicleType.upper()}")
+    if ctx.destination:
+        parts.append(f"Destination (from app): {ctx.destination}")
+    if ctx.vehicleName and ctx.vehicleType:
+        parts.append(f"Vehicle: {ctx.vehicleName} ({ctx.vehicleType.upper()})")
+    elif ctx.vehicleName:
+        parts.append(f"Vehicle: {ctx.vehicleName}")
+    elif ctx.vehicleType:
+        parts.append(f"Powertrain: {ctx.vehicleType.upper()}")
     if ctx.walletBalance is not None:
         parts.append(f"VETC wallet balance: {ctx.walletBalance:,} VND")
     if ctx.selectedRoute:
@@ -98,6 +118,53 @@ def _build_context_text(ctx: ChatContext | None) -> str:
     return "\n\nTrip context:\n" + "\n".join(parts)
 
 
+def _is_compatible_mode_url(url: str) -> bool:
+    return "compatible-mode" in url
+
+
+def _build_dashscope_payload(messages: list[dict[str, str]]) -> dict:
+    if _is_compatible_mode_url(settings.dashscope_url):
+        return {
+            "model": settings.model_name,
+            "messages": messages,
+            "max_tokens": settings.max_tokens,
+        }
+
+    return {
+        "model": settings.model_name,
+        "input": {
+            "messages": messages,
+        },
+        "parameters": {
+            "max_tokens": settings.max_tokens,
+            "result_format": "message",
+        },
+    }
+
+
+def _extract_reply(response_json: dict) -> str:
+    # DashScope classic format
+    output_reply = (
+        response_json.get("output", {})
+        .get("choices", [{}])[0]
+        .get("message", {})
+        .get("content")
+    )
+    if isinstance(output_reply, str) and output_reply.strip():
+        return output_reply
+
+    # DashScope OpenAI-compatible format
+    compatible_reply = (
+        response_json.get("choices", [{}])[0]
+        .get("message", {})
+        .get("content")
+    )
+    if isinstance(compatible_reply, str) and compatible_reply.strip():
+        return compatible_reply
+
+    raise KeyError("reply")
+
+
 # ── Routes ────────────────────────────────────────────────────────────────────
 
 @app.get("/health")
@@ -116,19 +183,13 @@ async def chat(req: ChatRequest) -> ChatResponse:
 
     user_content = req.message + _build_context_text(req.context)
 
-    payload = {
-        "model": settings.model_name,
-        "input": {
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_content},
-            ]
-        },
-        "parameters": {
-            "max_tokens": settings.max_tokens,
-            "result_format": "message",
-        },
-    }
+    messages: list[dict[str, str]] = [{"role": "system", "content": SYSTEM_PROMPT}]
+    if req.history:
+        for item in req.history[-MAX_HISTORY_MESSAGES:]:
+            messages.append({"role": item.role, "content": item.content})
+    messages.append({"role": "user", "content": user_content})
+
+    payload = _build_dashscope_payload(messages)
     headers = {
         "Authorization": f"Bearer {settings.dashscope_api_key}",
         "Content-Type": "application/json",
@@ -139,9 +200,10 @@ async def chat(req: ChatRequest) -> ChatResponse:
             response = await client.post(settings.dashscope_url, json=payload, headers=headers)
             response.raise_for_status()
     except httpx.HTTPStatusError as exc:
+        detail_text = exc.response.text[:300] if exc.response is not None else ""
         raise HTTPException(
             status_code=502,
-            detail=f"DashScope returned {exc.response.status_code}",
+            detail=f"DashScope returned {exc.response.status_code}: {detail_text}",
         ) from exc
     except httpx.RequestError as exc:
         raise HTTPException(
@@ -150,7 +212,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
         ) from exc
 
     try:
-        reply: str = response.json()["output"]["choices"][0]["message"]["content"]
+        reply = _extract_reply(response.json())
     except (KeyError, IndexError) as exc:
         raise HTTPException(
             status_code=502,

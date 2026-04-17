@@ -83,6 +83,10 @@ export function VoiceChatOverlay({
                   <span className="voice-trip-fact-value">{voiceContext.destination}</span>
                 </div>
                 <div className="voice-trip-fact">
+                  <span className="voice-trip-fact-label">Vehicle</span>
+                  <span className="voice-trip-fact-value">{voiceContext.vehicleName ?? '—'}</span>
+                </div>
+                <div className="voice-trip-fact">
                   <span className="voice-trip-fact-label">Selected route</span>
                   <span className="voice-trip-fact-value">{voiceContext.routeLabel}</span>
                 </div>

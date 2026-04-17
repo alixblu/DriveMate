@@ -62,13 +62,25 @@ function pickVoice(voices) {
   );
 }
 
+function buildQwenHistory(messages) {
+  const max = 24;
+  return messages
+    .filter((m) => m.role === 'driver' || m.role === 'assistant')
+    .slice(-max)
+    .map((m) => {
+      const text = [m.title, m.content].filter(Boolean).join(m.title ? '. ' : '');
+      return { role: m.role === 'driver' ? 'user' : 'assistant', content: text.trim() };
+    })
+    .filter((m) => m.content.length > 0);
+}
+
 function createDecisionMessages(snapshot) {
   return [
     {
       id: `assistant-seed-${snapshot.scenario.id}-${snapshot.vehicle.id}`,
       role: 'assistant',
-      title: 'Daily decision',
-      content: snapshot.assistantBrief.explanation,
+      content:
+        "Hi — I'm DriveMate. Ask me about your commute, routes, wallet, or fuel. If something is unclear, I'll ask a quick question.",
     },
   ];
 }
@@ -250,9 +262,13 @@ export default function App() {
     window.speechSynthesis.speak(utterance);
   }
 
-  const ASSISTANT_URL = (
+  const assistantBaseUrl = (
     import.meta.env.VITE_ASSISTANT_SERVICE_URL?.trim() || 'http://127.0.0.1:8009'
   ).replace(/\/$/, '');
+  const chatEndpoint = assistantBaseUrl.endsWith('/chat')
+    ? assistantBaseUrl
+    : `${assistantBaseUrl}/chat`;
+  const simulationChatEnabled = import.meta.env.VITE_ENABLE_SIMULATION_CHAT === '1';
 
   async function handleQwenAsk(prompt) {
     const text = prompt.trim();
@@ -263,10 +279,13 @@ export default function App() {
       setActiveDestination(matchedDestination);
     }
 
+    const historyForApi = buildQwenHistory(messages);
+
     setMessages((prev) => [...prev, { id: `user-${ts}`, role: 'driver', content: text }]);
 
-    const sim = simulationReply(text);
+    const sim = simulationChatEnabled ? simulationReply(text) : { matched: false, text: null };
     if (sim.matched) {
+      console.info('[DriveMate][assistant] source=simulation');
       setMessages((prev) => [
         ...prev,
         { id: `assistant-${ts + 1}`, role: 'assistant', title: 'DriveMate AI', content: sim.text },
@@ -277,6 +296,7 @@ export default function App() {
     setQwenLoading(true);
 
     const context = {
+      vehicleName: activeVehicle.name,
       vehicleType: activeVehicle.powertrain,
       destination: displayedDestination,
       walletBalance,
@@ -301,20 +321,26 @@ export default function App() {
     };
 
     try {
-      const res = await fetch(`${ASSISTANT_URL}/chat`, {
+      const res = await fetch(chatEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, context }),
+        body: JSON.stringify({ message: text, context, history: historyForApi }),
         signal: AbortSignal.timeout(35_000),
       });
-      const data = res.ok ? await res.json() : null;
+      if (!res.ok) {
+        const detail = await res.text();
+        throw new Error(`/chat ${res.status}: ${detail}`);
+      }
+      const data = await res.json();
       const reply = data?.reply ?? buildAssistantReply(text, snapshot).answer;
+      console.info('[DriveMate][assistant] source=qwen');
       setMessages((prev) => [
         ...prev,
         { id: `assistant-${ts + 1}`, role: 'assistant', title: 'DriveMate AI', content: reply },
       ]);
       return reply;
-    } catch {
+    } catch (error) {
+      console.error('[DriveMate][assistant] source=local-fallback reason=', error);
       const fallback = buildAssistantReply(text, snapshot);
       setMessages((prev) => [
         ...prev,
