@@ -84,6 +84,8 @@ export function AssistantPage({
   onAsk,
   qwenLoading = false,
   activeDestination,
+  autoSpeakAssistant = true,
+  setAutoSpeakAssistant,
 }) {
   const [trafficId, setTrafficId] = useState('normal');
   const [draft, setDraft] = useState('');
@@ -359,6 +361,16 @@ export function AssistantPage({
         <div className="assistant-feature-head">
           <p className="section-label">DriveMate AI Chat</p>
           <strong>Ask about route, fuel, wallet, or departure time</strong>
+        </div>
+        <div className="assistant-actions-head" style={{ marginTop: 8 }}>
+          <p className="chat-history-note">Voice output</p>
+          <button
+            type="button"
+            className="text-button"
+            onClick={() => setAutoSpeakAssistant?.(!autoSpeakAssistant)}
+          >
+            {autoSpeakAssistant ? 'Auto-speak ON' : 'Auto-speak OFF'}
+          </button>
         </div>
         <div className="assistant-action-grid">
           {snapshot.quickPrompts.map((q) => (

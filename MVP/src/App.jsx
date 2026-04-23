@@ -55,7 +55,18 @@ function pickVoice(voices) {
 
   return (
     searchable.find((voice) =>
-      ['jenny', 'samantha', 'aria', 'zira', 'emma', 'davis', 'guy'].some((hint) =>
+      [
+        'natural',
+        'online',
+        'neural',
+        'jenny',
+        'samantha',
+        'aria',
+        'zira',
+        'emma',
+        'davis',
+        'guy',
+      ].some((hint) =>
         `${voice.name} ${voice.voiceURI}`.toLowerCase().includes(hint),
       ),
     ) ?? searchable[0] ?? null
@@ -108,6 +119,7 @@ export default function App() {
   const [voiceState, setVoiceState] = useState('idle');
   const [voiceError, setVoiceError] = useState('');
   const [voiceChatOpen, setVoiceChatOpen] = useState(false);
+  const [autoSpeakAssistant, setAutoSpeakAssistant] = useState(true);
   const [activeDestination, setActiveDestination] = useState(DESTINATIONS[0]);
   const [availableVoices, setAvailableVoices] = useState([]);
   const [forecastData, setForecastData] = useState({ fuelTrend: null, commuteWindow: null });
@@ -338,6 +350,9 @@ export default function App() {
         ...prev,
         { id: `assistant-${ts + 1}`, role: 'assistant', title: 'DriveMate AI', content: reply },
       ]);
+      if (autoSpeakAssistant && hasSpeechSupport && !voiceChatOpen) {
+        speakText(reply);
+      }
       return reply;
     } catch (error) {
       console.error('[DriveMate][assistant] source=local-fallback reason=', error);
@@ -346,6 +361,9 @@ export default function App() {
         ...prev,
         { id: `assistant-${ts + 1}`, role: 'assistant', title: fallback.title, content: fallback.answer },
       ]);
+      if (autoSpeakAssistant && hasSpeechSupport && !voiceChatOpen) {
+        speakText(fallback.answer);
+      }
       return fallback.answer;
     } finally {
       setQwenLoading(false);
@@ -536,6 +554,8 @@ export default function App() {
           onAsk={handleQwenAsk}
           qwenLoading={qwenLoading}
           activeDestination={activeDestination}
+          autoSpeakAssistant={autoSpeakAssistant}
+          setAutoSpeakAssistant={setAutoSpeakAssistant}
         />
       )}
 
