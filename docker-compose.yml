@@ -2,6 +2,7 @@ version: "3.9"
 
 services:
   frontend:
+    image: ghcr.io/alixblu/drivemate-frontend:latest
     build:
       context: .
       dockerfile: Dockerfile.frontend
@@ -11,12 +12,15 @@ services:
     ports:
       - "80:80"
     depends_on:
-      - timesfm_service
-      - assistant_service
+      timesfm_service:
+        condition: service_healthy
+      assistant_service:
+        condition: service_healthy
     networks:
       - drivemate
 
   timesfm_service:
+    image: ghcr.io/alixblu/drivemate-timesfm:latest
     build:
       context: .
       dockerfile: timesfm_service/Dockerfile
@@ -30,8 +34,15 @@ services:
     networks:
       - drivemate
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8008/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   assistant_service:
+    image: ghcr.io/alixblu/drivemate-assistant:latest
     build:
       context: .
       dockerfile: assistant_service/Dockerfile
@@ -42,6 +53,11 @@ services:
     networks:
       - drivemate
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request, sys; sys.exit(0) if urllib.request.urlopen('http://localhost:8009/health').getcode() == 200 else sys.exit(1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 networks:
   drivemate:
